@@ -222,13 +222,15 @@ class Plateau():
     def validation(self, en_attente):
         # Enregistrer les pièces placées dans l'image de fond
         for l in en_attente:
+            if l.img == None:
+                l.creer_image((self.wCell, self.hCell))
             self.img.blit(l.img, self.get_cell_orig(l.pos))
 
-    def get_cell_orig(self, cellName):
+    def get_cell_orig(self, cell_name):
         """ Fournir les coordonnées du coin supérieur gauche d'une cellule"""
 
-        colonne = int(cellName[1:])-1
-        ligne = LIGNES.find(cellName[0])
+        colonne = int(cell_name[1:])-1
+        ligne = LIGNES.find(cell_name[0])
         coord = (self.x0+colonne*self.wCell, self.y0+ligne*self.hCell)
         return coord
 

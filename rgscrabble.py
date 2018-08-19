@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import sys
 import pygame
 
 from plateau import Plateau
@@ -31,8 +32,19 @@ def main():
     screen = pygame.display.set_mode((w_width, w_height))
     pygame.display.set_caption('Scrabble')
     clock = pygame.time.Clock()
-    jeu = Jeu()
-    plateau = Plateau(screen.get_size(), jeu.grille_bonus)
+
+    plateau = Plateau(screen.get_size(), Jeu.grille_bonus)
+
+    nb_args = len(sys.argv)
+    if nb_args==2:
+        jeu = Jeu(sys.argv[1])
+        plateau.validation(jeu.provisoire)
+    elif nb_args==1:
+        jeu = Jeu()
+    else:
+        print("Nombre d'arguments invalide")
+        pygame.quit()
+        quit()
 
     #####################
     # Boucle principale #
@@ -48,6 +60,8 @@ def main():
             elif event.type == pygame.KEYUP: 
                 if event.key == pygame.K_v: # Capture console
                     print(jeu)
+                elif event.key == pygame.K_s: # Sauvegarde fichier
+                    jeu.sauvegarder()
             elif event.type == pygame.MOUSEBUTTONDOWN: # Début de déplacement
                 piece_deplacee = plateau.start_move(event.pos, jeu.chevalet[0], jeu.provisoire)
                 if piece_deplacee == None:

@@ -1,34 +1,94 @@
 import random
 
 from lettre import *
+import time
 
 LIGNES = "ABCDEFGHIJKLMNO"
 
 class Jeu():
 
-	def __init__(self):
-		self.grille_bonus = [
-	         ["MT","  ","  ","LD","  ","  ","  ","MT","  ","  ","  ","LD","  ","  ","MT"],
-	         ["  ","MD","  ","  ","  ","LT","  ","  ","  ","LT","  ","  ","  ","MD","  "],
-	         ["  ","  ","MD","  ","  ","  ","LD","  ","LD","  ","  ","  ","MD","  ","  "],
-	         ["LD","  ","  ","MD","  ","  ","  ","LD","  ","  ","  ","MD","  ","  ","LD"],
-	         ["  ","  ","  ","  ","MD","  ","  ","  ","  ","  ","MD","  ","  ","  ","  "],
-	         ["  ","LT","  ","  ","  ","LT","  ","  ","  ","LT","  ","  ","  ","LT","  "],
-	         ["  ","  ","LD","  ","  ","  ","LD","  ","LD","  ","  ","  ","LD","  ","  "],
-	         ["MT","  ","  ","LD","  ","  ","  ","DP","  ","  ","  ","LD","  ","  ","MT"],
-	         ["  ","  ","LD","  ","  ","  ","LD","  ","LD","  ","  ","  ","LD","  ","  "],
-	         ["  ","LT","  ","  ","  ","LT","  ","  ","  ","LT","  ","  ","  ","LT","  "],
-	         ["  ","  ","  ","  ","MD","  ","  ","  ","  ","  ","MD","  ","  ","  ","  "],
-	         ["LD","  ","  ","MD","  ","  ","  ","LD","  ","  ","  ","MD","  ","  ","LD"],
-	         ["  ","  ","MD","  ","  ","  ","LD","  ","LD","  ","  ","  ","MD","  ","  "],
-	         ["  ","MD","  ","  ","  ","LT","  ","  ","  ","LT","  ","  ","  ","MD","  "],
-	         ["MT","  ","  ","LD","  ","  ","  ","MT","  ","  ","  ","LD","  ","  ","MT"]]
+	grille_bonus = [
+         ["MT","  ","  ","LD","  ","  ","  ","MT","  ","  ","  ","LD","  ","  ","MT"],
+         ["  ","MD","  ","  ","  ","LT","  ","  ","  ","LT","  ","  ","  ","MD","  "],
+         ["  ","  ","MD","  ","  ","  ","LD","  ","LD","  ","  ","  ","MD","  ","  "],
+         ["LD","  ","  ","MD","  ","  ","  ","LD","  ","  ","  ","MD","  ","  ","LD"],
+         ["  ","  ","  ","  ","MD","  ","  ","  ","  ","  ","MD","  ","  ","  ","  "],
+         ["  ","LT","  ","  ","  ","LT","  ","  ","  ","LT","  ","  ","  ","LT","  "],
+         ["  ","  ","LD","  ","  ","  ","LD","  ","LD","  ","  ","  ","LD","  ","  "],
+         ["MT","  ","  ","LD","  ","  ","  ","DP","  ","  ","  ","LD","  ","  ","MT"],
+         ["  ","  ","LD","  ","  ","  ","LD","  ","LD","  ","  ","  ","LD","  ","  "],
+         ["  ","LT","  ","  ","  ","LT","  ","  ","  ","LT","  ","  ","  ","LT","  "],
+         ["  ","  ","  ","  ","MD","  ","  ","  ","  ","  ","MD","  ","  ","  ","  "],
+         ["LD","  ","  ","MD","  ","  ","  ","LD","  ","  ","  ","MD","  ","  ","LD"],
+         ["  ","  ","MD","  ","  ","  ","LD","  ","LD","  ","  ","  ","MD","  ","  "],
+         ["  ","MD","  ","  ","  ","LT","  ","  ","  ","LT","  ","  ","  ","MD","  "],
+         ["MT","  ","  ","LD","  ","  ","  ","MT","  ","  ","  ","LD","  ","  ","MT"]]
+
+	def __init__(self, filename=None):
 		self.grille = [ ["" for x in range(15)] for y in range(15)]
 		self.pioche = Lettre.get_pioche()
-		self.chevalet = [[None for i in range(9)]]
 		self.provisoire = []
-		self.score = 0
-		self.tour_jeu = 0
+		self.chevalet = [[None for i in range(9)]]
+
+		if filename==None: # Nouvelle partie
+			self.tour_jeu = 0
+			self.score = 0
+		else: # charger depuis le fichier
+			input = open(filename, "r")
+			for i in range(15): 
+				ligne = input.readline()
+				for j in range(15):
+					if ligne[j] == ' ':
+						self.grille[i][j] = ''
+					else:
+						self.grille[i][j] = ligne[j]
+						# enlever de la pioche
+						del self.pioche[self.pioche.index(ligne[j])] 
+						# ajouter dans la liste provisoire
+						lettre = Lettre(ligne[j])
+						lettre.pos = self.get_cell_name(j, i)
+						self.provisoire.append(lettre)
+
+			self.tour_jeu = int(input.readline())-1
+			input.readline() # nombre de joueurs = 1
+
+			self.score = int(input.readline())
+			ligne = input.readline()
+			for j in range(len(ligne)):
+				# enlever de la pioche
+				del self.pioche[self.pioche.index(ligne[j])] 
+				# ajouter sur le chevalet
+				lettre = Lettre(ligne[j])
+				lettre.pos = 'Q' + str(j+4)
+				self.chevalet[0][j] = lettre
+
+			input.close()
+
+	def sauvegarder(self):
+		# Nom du fichier
+		filename = time.strftime("%Y%m%d-%H%M.sav", time.gmtime())
+
+		out = open(filename, 'w')
+		# Grille
+		for i in range(15):
+			for j in range(15):
+				if self.grille[i][j] == '':
+					out.write(' ')
+				else:	
+					out.write(str(self.grille[i][j]))
+			out.write('\n')
+		# tour de jeu
+		out.write(str(self.tour_jeu)+'\n')
+		# Nombre de joueurs
+		out.write('1\n')
+		# Chaque (en commençant par celui dont c'est le tour): score puis chevalet/lettres placées
+		out.write(str(self.score)+'\n')
+		for l in self.chevalet[0]:
+			if l!=None: out.write(l.char)
+		for l in self.provisoire:
+			out.write(l.char)
+		out.close()
+		print('Sauvegarde dans '+filename)
 
 	def tirage_au_sort(self):
 		# Supprimer les pièces en attente
@@ -58,6 +118,8 @@ class Jeu():
 		self.tour_jeu += 1
 
 	def __str__(self):
+		""" État actuel du jeu dans une chaîne de caractères """
+
 		s = ' '
 		for i in range(15):
 			if i<9:
