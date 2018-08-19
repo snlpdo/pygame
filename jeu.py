@@ -1,5 +1,6 @@
 import random
 
+from joueur import *
 from lettre import *
 import time
 
@@ -27,8 +28,8 @@ class Jeu():
 	def __init__(self, filename=None):
 		self.grille = [ ["" for x in range(15)] for y in range(15)]
 		self.pioche = Lettre.get_pioche()
-		self.provisoire = []
-		self.chevalet = [[None for i in range(9)]]
+
+		self.joueur = [Joueur()]
 
 		if filename==None: # Nouvelle partie
 			self.tour_jeu = 0
@@ -41,13 +42,16 @@ class Jeu():
 					if ligne[j] == ' ':
 						self.grille[i][j] = ''
 					else:
-						self.grille[i][j] = ligne[j]
+						if ligne[j]=='?': 
+							self.grille[i][j] = ' '
+						else:
+							self.grille[i][j] = ligne[j]
 						# enlever de la pioche
-						del self.pioche[self.pioche.index(ligne[j])] 
+						del self.pioche[self.pioche.index(self.grille[i][j])] 
 						# ajouter dans la liste provisoire
-						lettre = Lettre(ligne[j])
+						lettre = Lettre(self.grille[i][j])
 						lettre.pos = self.get_cell_name(j, i)
-						self.provisoire.append(lettre)
+						self.joueur[0].provisoire.append(lettre)
 
 			self.tour_jeu = int(input.readline())-1
 			input.readline() # nombre de joueurs = 1
@@ -55,12 +59,16 @@ class Jeu():
 			self.score = int(input.readline())
 			ligne = input.readline()
 			for j in range(len(ligne)):
+				if ligne[j]=='?':
+					c = ' '
+				else:
+					c = ligne[j]
 				# enlever de la pioche
-				del self.pioche[self.pioche.index(ligne[j])] 
+				del self.pioche[self.pioche.index(c)] 
 				# ajouter sur le chevalet
-				lettre = Lettre(ligne[j])
+				lettre = Lettre(c)
 				lettre.pos = 'Q' + str(j+4)
-				self.chevalet[0][j] = lettre
+				self.joueur[0].chevalet[0][j] = lettre
 
 			input.close()
 
@@ -74,6 +82,8 @@ class Jeu():
 			for j in range(15):
 				if self.grille[i][j] == '':
 					out.write(' ')
+				elif self.grille[i][j]== ' ':
+					out.write('?')
 				else:	
 					out.write(str(self.grille[i][j]))
 			out.write('\n')
@@ -83,20 +93,20 @@ class Jeu():
 		out.write('1\n')
 		# Chaque (en commençant par celui dont c'est le tour): score puis chevalet/lettres placées
 		out.write(str(self.score)+'\n')
-		for l in self.chevalet[0]:
+		for l in self.joueur[0].chevalet[0]:
 			if l!=None: out.write(l.char)
-		for l in self.provisoire:
+		for l in self.joueur[0].provisoire:
 			out.write(l.char)
 		out.close()
 		print('Sauvegarde dans '+filename)
 
 	def tirage_au_sort(self):
 		# Supprimer les pièces en attente
-		self.provisoire = []
+		self.joueur[0].provisoire = []
 
 		# Compter le nombre pièces initiale sur le chevalet
 		compte = 0
-		for l in self.chevalet[0]:
+		for l in self.joueur[0].chevalet[0]:
 			if l!=None: compte += 1
 
 		# Remplir le chevalet
@@ -106,12 +116,12 @@ class Jeu():
 			lettre = Lettre(c)
 
 			i=0
-			while self.chevalet[0][i]!=None: i += 1
+			while self.joueur[0].chevalet[0][i]!=None: i += 1
 			lettre.pos = 'Q' + str(i+4)
-			self.chevalet[0][i] = lettre
+			self.joueur[0].chevalet[0][i] = lettre
 
 			compte = 0
-			for l in self.chevalet[0]:
+			for l in self.joueur[0].chevalet[0]:
 				if l!=None: compte += 1
 
 		# Début du tour de jeu suivant
@@ -145,15 +155,15 @@ class Jeu():
 			s += '\n ' + '-'*31 + '\n'
 		s += '\n'
 
-		s += '   ' + '-'*(2+len(self.chevalet[0])) + '\n'
+		s += '   ' + '-'*(2+len(self.joueur[0].chevalet[0])) + '\n'
 		s += '   |'
-		for i in range(len(self.chevalet[0])):
-			if self.chevalet[0][i]==None:
+		for i in range(len(self.joueur[0].chevalet[0])):
+			if self.joueur[0].chevalet[0][i]==None:
 				s += ' '
 			else:
-				s += self.chevalet[0][i].char
+				s += self.joueur[0].chevalet[0][i].char
 		s += '|\n'
-		s += '   ' + '-'*(2+len(self.chevalet[0])) + '\n'
+		s += '   ' + '-'*(2+len(self.joueur[0].chevalet[0])) + '\n'
 
 		s += '\nScore: ' + self.score
 		return s
@@ -165,10 +175,10 @@ class Jeu():
 		if cell_name[0]=='Q': # zone de chevalet
 			i = 0
 			j = int(cell_name[1:])-4
-			if self.chevalet[i][j]==None:
-				return (self.chevalet, (j,i), False)
+			if self.joueur[0].chevalet[i][j]==None:
+				return (self.joueur[0].chevalet, (j,i), False)
 			else:
-				return (self.chevalet, (j, i), True)
+				return (self.joueur[0].chevalet, (j, i), True)
 		else: # zone de jeu
 			i = LIGNES.index(cell_name[0])
 			j = int(cell_name[1:])-1
@@ -181,7 +191,7 @@ class Jeu():
 		if cell_name[0]=='Q': # zone de chevalet
 			i = 0
 			j = int(cell_name[1:])-4
-			self.chevalet[i][j]=None
+			self.joueur[0].chevalet[i][j]=None
 		else: # zone de jeu
 			i = LIGNES.index(cell_name[0])
 			j = int(cell_name[1:])-1
@@ -197,20 +207,20 @@ class Jeu():
 
 		# libérer l'ancienne position
 		self.free_cell(piece.pos)
-		if src_zone==self.chevalet and dst_zone==self.grille:
+		if src_zone==self.joueur[0].chevalet and dst_zone==self.grille:
 			# Nouvelle piece en placement provisoire
-			self.chevalet[src_idx[1]][src_idx[0]] = None
+			self.joueur[0].chevalet[src_idx[1]][src_idx[0]] = None
 			self.grille[dst_idx[1]][dst_idx[0]] = piece.char
-			self.provisoire.append(piece)
-		elif src_zone==self.grille and dst_zone==self.chevalet:
+			self.joueur[0].provisoire.append(piece)
+		elif src_zone==self.grille and dst_zone==self.joueur[0].chevalet:
 			# Déplacement de la grille vers la zone de chevalet
 			self.grille[src_idx[1]][src_idx[0]] = ""
-			del self.provisoire[self.provisoire.index(piece)]
-			self.chevalet[dst_idx[1]][dst_idx[0]] = piece
-		elif src_zone==self.chevalet and dst_zone==self.chevalet:
+			del self.joueur[0].provisoire[self.joueur[0].provisoire.index(piece)]
+			self.joueur[0].chevalet[dst_idx[1]][dst_idx[0]] = piece
+		elif src_zone==self.joueur[0].chevalet and dst_zone==self.joueur[0].chevalet:
 			# Déplacement dans la zone de chevalet
-			self.chevalet[src_idx[1]][src_idx[0]] = None
-			self.chevalet[dst_idx[1]][dst_idx[0]] = piece
+			self.joueur[0].chevalet[src_idx[1]][src_idx[0]] = None
+			self.joueur[0].chevalet[dst_idx[1]][dst_idx[0]] = piece
 		else: # Déplacement dans la grille
 			self.grille[src_idx[1]][src_idx[0]] = ""
 			self.grille[dst_idx[1]][dst_idx[0]] = piece.char
@@ -222,7 +232,7 @@ class Jeu():
 		msg = ""
 
 		# Vérifier qu'une pièce a été posée
-		if len(self.provisoire)==0:
+		if len(self.joueur[0].provisoire)==0:
 			return (False, "Aucune pièce n'a été placée sur le jeu")
 
 		# Déterminer la direction principale
@@ -230,8 +240,8 @@ class Jeu():
 		horizontal = True
 		vertical = True
 		xmin, xmax, ymin, ymax =15, 0, 15, 0
-		for i in range(len(self.provisoire)):
-			zone, c, b = self.get_cell_info(self.provisoire[i].pos)
+		for i in range(len(self.joueur[0].provisoire)):
+			zone, c, b = self.get_cell_info(self.joueur[0].provisoire[i].pos)
 			if i==0:
 				x, y = c[0], c[1]
 				xmin, xmax, ymin, ymax = x, x, y, y
@@ -258,7 +268,7 @@ class Jeu():
 		# Vérifier la position du mot
 		if self.tour_jeu == 1:
 			positionOK = False
-			for p in self.provisoire:
+			for p in self.joueur[0].provisoire:
 				if p.pos == "H8":
 					positionOK = True
 			if not(positionOK):
@@ -272,7 +282,7 @@ class Jeu():
 			msg_h += res[0]+' : '+ str(res[1]) + ' points'
 
 			# Identifier les mots verticaux supplémentaires
-			for l in self.provisoire:
+			for l in self.joueur[0].provisoire:
 				zone, c, busy = self.get_cell_info(l.pos)
 				res = self.identifier_mot_vertical(c[0], c[1])
 				if res[1] != 0:
@@ -290,7 +300,7 @@ class Jeu():
 			msg_v += res[0]+' : '+ str(res[1]) + ' points'
 
 			# Identifier les mots verticaux supplémentaires
-			for l in self.provisoire:
+			for l in self.joueur[0].provisoire:
 				zone, c, busy = self.get_cell_info(l.pos)
 				res = self.identifier_mot_horizontal(c[0], c[1])
 				if res[1] != 0:
@@ -302,7 +312,7 @@ class Jeu():
 		else:
 			return (False, 'Direction de placement non reconnue')
 
-		scrabble = len(self.provisoire)==7
+		scrabble = len(self.joueur[0].provisoire)==7
 
 		return (True, msg)
 
@@ -336,7 +346,7 @@ class Jeu():
 			point_lettre = (Lettre.alphabet[str(mot[x-xmin])])[1]
 
 			nouvelle_lettre = False
-			for l in self.provisoire:
+			for l in self.joueur[0].provisoire:
 				if l.pos == cell_name:
 					nouvelle_lettre = True
 					break
@@ -378,7 +388,7 @@ class Jeu():
 			point_lettre = (Lettre.alphabet[str(mot[y-ymin])])[1]
 
 			nouvelle_lettre = False
-			for l in self.provisoire:
+			for l in self.joueur[0].provisoire:
 				if l.pos == cell_name:
 					nouvelle_lettre = True
 					break

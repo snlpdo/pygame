@@ -1,6 +1,8 @@
 import pygame
 from math import cos, sin, pi
+
 from lettre import *
+from joueur import *
 
 # Couleurs
 NOIR = (0,0,0)
@@ -195,7 +197,7 @@ class Plateau():
 
         return b
 
-    def afficher_joueur(self, screen, chevalet, en_attente):
+    def afficher_joueur(self, screen, joueur):
         """ Dessine les pièces du joueur:
         - celles dans le chevalet.
         - celles sur le plateau en attente de validation.
@@ -207,13 +209,15 @@ class Plateau():
         - file contenant les pièces posées sur le jeu mais pas encore
           validées.
         """ 
-
-        for l in chevalet:
+        font = pygame.font.SysFont('comicsans', 18)
+        text = font.render('Joueur '+str(joueur.idx), True, NOIR)
+        screen.blit(text, (LEFT_MARGIN+3*self.wCell,TOP_MARGIN+16*self.hCell-20))
+        for l in joueur.chevalet[0]:
             if l != None and l != self.piece_a_deplacer:
                 if l.img == None:
                     l.creer_image((self.wCell, self.hCell))
                 screen.blit(l.img, self.get_cell_orig(l.pos))
-        for l in en_attente:
+        for l in joueur.provisoire:
             if l != self.piece_a_deplacer:
                 if l.img == None:
                     l.creer_image((self.wCell, self.hCell))
@@ -245,23 +249,23 @@ class Plateau():
                 return LIGNES[ligne] + str(colonne+1)
         return None
     
-    def can_move(self, pos, chevalet, en_attente):
+    def can_move(self, pos, joueur):
         """ Indique si la position indiquée correspond à une case contenant pièce
             pouvant se déplacer """
         
-        cellName =  self.get_cell_name(pos)
-        if cellName!=None:
+        cell_name =  self.get_cell_name(pos)
+        if cell_name!=None:
             # Rechercher si pièce valide
-            for t in chevalet:
-                if t!=None and t.pos == cellName:
+            for t in joueur.chevalet[0]:
+                if t!=None and t.pos == cell_name:
                     return (True, t)
-            for t in en_attente:
-                if t.pos == cellName:
+            for t in joueur.provisoire:
+                if t.pos == cell_name:
                     return (True, t)
         return (False, None)
 
-    def start_move(self, pos, chevalet, en_attente):
-        result = self.can_move(pos, chevalet, en_attente)
+    def start_move(self, pos, joueur):
+        result = self.can_move(pos, joueur)
         if result[0]: # Début de déplacement
             self.piece_a_deplacer = result[1]
             self.piece_a_deplacer_pos = pos

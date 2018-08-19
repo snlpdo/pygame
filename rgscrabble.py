@@ -38,7 +38,7 @@ def main():
     nb_args = len(sys.argv)
     if nb_args==2:
         jeu = Jeu(sys.argv[1])
-        plateau.validation(jeu.provisoire)
+        plateau.validation(jeu.joueur[0].provisoire)
     elif nb_args==1:
         jeu = Jeu()
     else:
@@ -63,7 +63,7 @@ def main():
                 elif event.key == pygame.K_s: # Sauvegarde fichier
                     jeu.sauvegarder()
             elif event.type == pygame.MOUSEBUTTONDOWN: # Début de déplacement
-                piece_deplacee = plateau.start_move(event.pos, jeu.chevalet[0], jeu.provisoire)
+                piece_deplacee = plateau.start_move(event.pos, jeu.joueur[0])
                 if piece_deplacee == None:
                     plateau.check_button(event.pos, True)
             elif event.type == pygame.MOUSEMOTION: 
@@ -84,7 +84,7 @@ def main():
 
         # Afficher les lettres du joueur sur le chevalet et celles
         # en placement provisoire sur le plateau
-        plateau.afficher_joueur(screen, jeu.chevalet[0], jeu.provisoire)
+        plateau.afficher_joueur(screen, jeu.joueur[0])
 
         # Afficher la lettre en cours de déplacement
         if piece_deplacee != None:
@@ -100,7 +100,7 @@ def main():
                 set_message(result[1], 3)
             elif result[1]!="": # Coup valide
                 set_message(result[1], 3, "info")
-                plateau.validation(jeu.provisoire)
+                plateau.validation(jeu.joueur[0].provisoire)
                 jeu.tirage_au_sort()
 
         update_message(screen, plateau)
