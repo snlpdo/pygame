@@ -2,6 +2,7 @@
 
 import sys
 import pygame
+import argparse
 
 from plateau import Plateau
 from lettre import * 
@@ -27,6 +28,14 @@ def update_message(screen, plateau):
         plateau.print_status(screen, message, msg_type)
 
 def main():
+    # Analyse de la ligne de commande
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-i', '--input', 
+        help='Charger une sauvegarde de partie')
+    parser.add_argument('-nb', '--nombre_joueurs', type=int, 
+        help='Nombre de joueurs pour cette partie')
+    args = parser.parse_args()
+
     # Initialisation
     pygame.init()
     screen = pygame.display.set_mode((w_width, w_height))
@@ -35,16 +44,15 @@ def main():
 
     plateau = Plateau(screen.get_size(), Jeu.grille_bonus)
 
-    nb_args = len(sys.argv)
-    if nb_args==2:
-        jeu = Jeu(sys.argv[1])
+    # Création du jeu
+    if args.nombre_joueurs==None:
+        args.nombre_joueurs=1
+
+    if args.input!=None:
+        jeu = Jeu(args.input, args.nombre_joueurs)
         plateau.validation(jeu.joueur[0].provisoire)
-    elif nb_args==1:
-        jeu = Jeu()
     else:
-        print("Nombre d'arguments invalide")
-        pygame.quit()
-        quit()
+        jeu = Jeu(args.nombre_joueurs)
 
     #####################
     # Boucle principale #

@@ -25,7 +25,7 @@ class Jeu():
          ["  ","MD","  ","  ","  ","LT","  ","  ","  ","LT","  ","  ","  ","MD","  "],
          ["MT","  ","  ","LD","  ","  ","  ","MT","  ","  ","  ","LD","  ","  ","MT"]]
 
-	def __init__(self, filename=None):
+	def __init__(self, nb_joueurs, filename=None):
 		self.grille = [ ["" for x in range(15)] for y in range(15)]
 		self.pioche = Lettre.get_pioche()
 
