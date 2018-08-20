@@ -226,12 +226,12 @@ class Plateau():
                     l.creer_image((self.wCell, self.hCell))
                 screen.blit(l.img, self.get_cell_orig(l.pos))
 
-    def validation(self, jeu):
+    def validation(self, joueur):
         """ Enregistrer dans l'image du plateau le coup joué par le joueur
         courant"""
 
         # Enregistrer les pièces placées dans l'image de fond
-        for l in jeu.joueurs[jeu.joueur_courant-1].provisoire:
+        for l in joueur.provisoire:
             if l.img == None:
                 l.creer_image((self.wCell, self.hCell))
             self.img.blit(l.img, self.get_cell_orig(l.pos))

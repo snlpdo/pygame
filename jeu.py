@@ -25,7 +25,7 @@ class Jeu():
          ["  ","MD","  ","  ","  ","LT","  ","  ","  ","LT","  ","  ","  ","MD","  "],
          ["MT","  ","  ","LD","  ","  ","  ","MT","  ","  ","  ","LD","  ","  ","MT"]]
 
-	def __init__(self, nb_joueurs, filename=None):
+	def __init__(self, nb_joueurs, plateau=None, filename=None):
 		""" Contruire un nouveau jeu original ou chargé depuis un fichier de 
 		sauvegarde. """
 
@@ -38,6 +38,14 @@ class Jeu():
 			self.joueur_courant = 1
 		else: # charger depuis le fichier
 			input = open(filename, "r")
+
+			self.tour_jeu = int(input.readline())
+
+			nombre_joueurs = int(input.readline()) 
+			self.joueurs = [Joueur() for i in range(nb_joueurs)]
+
+			self.joueur_courant = int(input.readline())
+
 			for i in range(15): 
 				ligne = input.readline()
 				for j in range(15):
@@ -50,22 +58,19 @@ class Jeu():
 							self.grille[i][j] = ligne[j]
 						# enlever de la pioche
 						del self.pioche[self.pioche.index(self.grille[i][j])] 
-						# ajouter dans la liste provisoire
-						lettre = Lettre(self.grille[i][j])
+						
+						# ajouter dans la liste provisoire du 1er joueur
+						lettre = Lettre(self.grille[i][j]) 
 						lettre.pos = self.get_cell_name(j, i)
-						self.joueur[0].provisoire.append(lettre)
+						self.joueurs[0].provisoire.append(lettre)
 
-			self.tour_jeu = int(input.readline())-1
-			nombre_joueurs = int(input.readline()) # nombre de joueurs = 1
-			self.joueurs = [Joueur() for i in range(nb_joueurs)]
-
-			for j in self.joueurs:
+			for joueur in self.joueurs:
 				# lecture du score
-				j.score = int(input.readline())
+				joueur.score = int(input.readline())
 				
 				# lecture des lettres du chevalet
 				ligne = input.readline()
-				for j in range(len(ligne)):
+				for j in range(len(ligne)-1): # ne pas lire \n
 					if ligne[j]=='?':
 						c = ' '
 					else:
@@ -75,9 +80,7 @@ class Jeu():
 					# ajouter sur le chevalet
 					lettre = Lettre(c)
 					lettre.pos = 'Q' + str(j+4)
-					j.chevalet[0][j] = lettre
-
-			self.joueur_courant = int(input.readline())-1
+					joueur.chevalet[0][j] = lettre
 
 			input.close()
 
@@ -89,6 +92,16 @@ class Jeu():
 		filename = time.strftime("%Y%m%d-%H%M.sav", time.gmtime())
 
 		out = open(filename, 'w')
+
+		# tour de jeu
+		out.write(str(self.tour_jeu)+'\n')
+
+		# Nombre de joueurs
+		out.write(str(len(self.joueurs)) + '\n')
+
+		# Joueur courant
+		out.write(str(self.joueur_courant) + '\n')
+
 		# Grille
 		for i in range(15):
 			for j in range(15):
@@ -99,10 +112,6 @@ class Jeu():
 				else:	
 					out.write(str(self.grille[i][j]))
 			out.write('\n')
-		# tour de jeu
-		out.write(str(self.tour_jeu)+'\n')
-		# Nombre de joueurs
-		out.write(str(len(self.joueurs)) + '\n')
 
 		# Chaque joueur: score puis chevalet + lettres placées
 		for j in self.joueurs:
@@ -112,9 +121,7 @@ class Jeu():
 			for l in j.provisoire:
 				out.write(l.char)
 
-		# Joueur courant
-		out.write(str(self.joueur_courant))
-
+		out.write('\n')
 		out.close()
 
 		return filename
@@ -182,8 +189,8 @@ class Jeu():
 		s += '\n'
 
 		# Score et chevalet de chaque joueur
-		for j in joueurs:
-			s += '\n\nJoueur '+ str(j.num) +', score: ' + j.score
+		for j in self.joueurs:
+			s += '\nJoueur '+ str(j.num) +', score: ' + str(j.score) + '\n'
 			s += '   ' + '-'*(2+len(j.chevalet[0])) + '\n'
 			s += '   |'
 			for i in range(len(j.chevalet[0])):
@@ -195,7 +202,7 @@ class Jeu():
 			s += '   ' + '-'*(2+len(j.chevalet[0])) + '\n'
 
 		# Joueur courant:
-		s += '\n\n Joueur courant: ' + str(self.joueur_courant)
+		s += '\n Joueur courant: ' + str(self.joueur_courant)
 
 		return s
 
@@ -242,31 +249,43 @@ class Jeu():
 		""" Déplacer une pièce sur le jeur (grille ou
 		chevalet du joueur courant). """
 
-		dst_zone, dst_idx, busy = self.get_cell_info(destination)
+		dst_zone, dst_idx, dst_busy = self.get_cell_info(destination)
+		src_zone, src_idx, src_busy = self.get_cell_info(piece.pos)
 
-		if busy: # destination invalide
-			return False
-
-		src_zone, src_idx, busy = self.get_cell_info(piece.pos)
-
-		# libérer l'ancienne position
-		self.free_cell(piece.pos)
 		joueur = self.joueurs[self.joueur_courant-1]
-		if src_zone==joueur.chevalet and dst_zone==self.grille:
+		if src_zone==joueur.chevalet and dst_zone==self.grille: # Chevalet vers grille
+			if dst_busy: return False # destination occupée
+
+			self.free_cell(piece.pos) # libérer ancienne place
+
 			# Nouvelle piece en placement provisoire
 			joueur.chevalet[src_idx[1]][src_idx[0]] = None
 			self.grille[dst_idx[1]][dst_idx[0]] = piece.char
 			joueur.provisoire.append(piece)
-		elif src_zone==self.grille and dst_zone==joueur.chevalet:
+		elif src_zone==self.grille and dst_zone==joueur.chevalet: # Grille vers chevalet
+			if dst_busy: return False # destination occupée
+
+			self.free_cell(piece.pos) # libérer ancienne place
+
 			# Déplacement de la grille vers la zone de chevalet
 			self.grille[src_idx[1]][src_idx[0]] = ""
 			del joueur.provisoire[joueur.provisoire.index(piece)]
 			joueur.chevalet[dst_idx[1]][dst_idx[0]] = piece
-		elif src_zone==joueur.chevalet and dst_zone==joueur.chevalet:
-			# Déplacement dans la zone de chevalet
-			joueur.chevalet[src_idx[1]][src_idx[0]] = None
-			joueur.chevalet[dst_idx[1]][dst_idx[0]] = piece
+		elif src_zone==joueur.chevalet and dst_zone==joueur.chevalet: # Dans le chevalet
+			if dst_busy: # Échange des contenus
+				joueur.chevalet[src_idx[1]][src_idx[0]].pos, joueur.chevalet[dst_idx[1]][dst_idx[0]].pos = \
+				  joueur.chevalet[dst_idx[1]][dst_idx[0]].pos, joueur.chevalet[src_idx[1]][src_idx[0]].pos
+				joueur.chevalet[src_idx[1]][src_idx[0]], joueur.chevalet[dst_idx[1]][dst_idx[0]] = \
+				  joueur.chevalet[dst_idx[1]][dst_idx[0]], joueur.chevalet[src_idx[1]][src_idx[0]]
+			else:
+				self.free_cell(piece.pos) # libérer ancienne place
+				joueur.chevalet[src_idx[1]][src_idx[0]] = None
+				joueur.chevalet[dst_idx[1]][dst_idx[0]] = piece
 		else: # Déplacement dans la grille
+			if dst_busy: return False # destination occupée
+
+			self.free_cell(piece.pos) # libérer ancienne place
+
 			self.grille[src_idx[1]][src_idx[0]] = ""
 			self.grille[dst_idx[1]][dst_idx[0]] = piece.char
 		piece.pos = destination

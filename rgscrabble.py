@@ -49,9 +49,9 @@ def main():
         args.nombre_joueurs=1
 
     if args.input!=None:
-        jeu = Jeu(args.input, args.nombre_joueurs)
+        jeu = Jeu(args.nombre_joueurs, plateau, args.input)
         for j in jeu.joueurs:
-            plateau.validation(j.provisoire)
+            plateau.validation(j)
     else:
         jeu = Jeu(args.nombre_joueurs)
 
@@ -73,7 +73,7 @@ def main():
                     print(jeu)
                 elif event.key == pygame.K_s: # Sauvegarde fichier
                     filename = jeu.sauvegarder()
-                    plateau.print_status(screen, 'Sauvegarde dans '+filename, type='info')
+                    set_message('Sauvegarde dans '+filename, 2, 'info')
             elif event.type == pygame.MOUSEBUTTONDOWN: # Début de déplacement
                 piece_deplacee = plateau.start_move(event.pos, jeu)
                 if piece_deplacee == None:
@@ -112,7 +112,7 @@ def main():
                 set_message(result[1], 3)
             elif result[1]!="": # Coup valide
                 set_message(result[1], 3, "info")
-                plateau.validation(jeu)
+                plateau.validation(jeu.joueurs[jeu.joueur_courant-1])
                 jeu.tirage_au_sort(jeu.joueur_courant)
 
         update_message(screen, plateau)
