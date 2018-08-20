@@ -198,7 +198,8 @@ class Plateau():
         return b
 
     def afficher_joueur_courant(self, screen, jeu):
-        """ Dessine les pièces du joueur:
+        """ Dessine les pièces du joueur en ajoutant un point bleu 
+        dans le coin supérieur gauche:
         - celles dans le chevalet.
         - celles sur le plateau en attente de validation.
 
@@ -219,12 +220,16 @@ class Plateau():
             if l != None and l != self.piece_a_deplacer:
                 if l.img == None:
                     l.creer_image((self.wCell, self.hCell))
-                screen.blit(l.img, self.get_cell_orig(l.pos))
+                x, y = self.get_cell_orig(l.pos)
+                screen.blit(l.img, (x,y))
+                pygame.draw.rect(screen, BLEU, (x+5,y+5, 5, 5))
         for l in joueur.provisoire:
             if l != self.piece_a_deplacer:
                 if l.img == None:
                     l.creer_image((self.wCell, self.hCell))
-                screen.blit(l.img, self.get_cell_orig(l.pos))
+                x, y = self.get_cell_orig(l.pos)
+                screen.blit(l.img, (x, y))
+                pygame.draw.rect(screen, BLEU, (x+5,y+5, 5, 5))
 
     def validation(self, joueur):
         """ Enregistrer dans l'image du plateau le coup joué par le joueur
@@ -301,8 +306,10 @@ class Plateau():
         self.piece_a_deplacer = None
 
     def afficher_stat(self, screen, jeu):
-        # État de la pioche
         font = pygame.font.SysFont('comicsans', 24)
+        fontG = pygame.font.SysFont('comicsans', 36)
+
+        # État de la pioche
         s = 'Tour: ' + str(jeu.tour_jeu) 
         if len(jeu.pioche)>1:
             s += ' (' + str(len(jeu.pioche)) + ' lettres restantes)'
@@ -311,11 +318,21 @@ class Plateau():
         text = font.render(s , True, NOIR)
         screen.blit(text, (20, 5))
 
-        # Score du joueur
-        font2 = pygame.font.SysFont('comicsans', 36)
-        s = 'Score : ' + str(jeu.joueurs[jeu.joueur_courant-1].score)
-        text = font2.render(s, True, NOIR)
-        screen.blit(text, (25, TOP_MARGIN + 16*self.hCell + 10))
+        # Scores des joueurs
+        if len(jeu.joueurs)>1:
+            s = 'Scores:'
+        else:
+            s = 'Score:'
+        textT = fontG.render(s, True, NOIR)
+        screen.blit(textT, (25, TOP_MARGIN + 15*self.hCell+25))
+
+        for i, item in enumerate(jeu.joueurs):
+            s = 'J'+str(i+1) + '=' + str(jeu.joueurs[i].score)
+            if i==jeu.joueur_courant-1:
+                text = font.render(s, True, ROUGE)
+            else:
+                text = font.render(s, True, NOIR)
+            screen.blit(text, (40, TOP_MARGIN + 15*self.hCell +25 + textT.get_height()+5 + i*20))
 
     def bouton_validation(self, screen):
         pygame.draw.rect(screen, LIGHTGRAY, (self.bx0, self.by0, self.bw, self.bh))
