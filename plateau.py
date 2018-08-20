@@ -197,7 +197,7 @@ class Plateau():
 
         return b
 
-    def afficher_joueur(self, screen, joueur):
+    def afficher_joueur_courant(self, screen, jeu):
         """ Dessine les pièces du joueur:
         - celles dans le chevalet.
         - celles sur le plateau en attente de validation.
@@ -209,8 +209,11 @@ class Plateau():
         - file contenant les pièces posées sur le jeu mais pas encore
           validées.
         """ 
+        
+        joueur = jeu.joueurs[jeu.joueur_courant-1]
+
         font = pygame.font.SysFont('comicsans', 18)
-        text = font.render('Joueur '+str(joueur.idx), True, NOIR)
+        text = font.render('Joueur '+str(joueur.num), True, NOIR)
         screen.blit(text, (LEFT_MARGIN+3*self.wCell,TOP_MARGIN+16*self.hCell-20))
         for l in joueur.chevalet[0]:
             if l != None and l != self.piece_a_deplacer:
@@ -223,9 +226,12 @@ class Plateau():
                     l.creer_image((self.wCell, self.hCell))
                 screen.blit(l.img, self.get_cell_orig(l.pos))
 
-    def validation(self, en_attente):
+    def validation(self, jeu):
+        """ Enregistrer dans l'image du plateau le coup joué par le joueur
+        courant"""
+
         # Enregistrer les pièces placées dans l'image de fond
-        for l in en_attente:
+        for l in jeu.joueurs[jeu.joueur_courant-1].provisoire:
             if l.img == None:
                 l.creer_image((self.wCell, self.hCell))
             self.img.blit(l.img, self.get_cell_orig(l.pos))
@@ -249,10 +255,11 @@ class Plateau():
                 return LIGNES[ligne] + str(colonne+1)
         return None
     
-    def can_move(self, pos, joueur):
+    def can_move(self, pos, jeu):
         """ Indique si la position indiquée correspond à une case contenant pièce
             pouvant se déplacer """
-        
+        joueur = jeu.joueurs[jeu.joueur_courant-1]
+
         cell_name =  self.get_cell_name(pos)
         if cell_name!=None:
             # Rechercher si pièce valide
@@ -264,8 +271,9 @@ class Plateau():
                     return (True, t)
         return (False, None)
 
-    def start_move(self, pos, joueur):
-        result = self.can_move(pos, joueur)
+    def start_move(self, pos, jeu):
+        result = self.can_move(pos, jeu)
+
         if result[0]: # Début de déplacement
             self.piece_a_deplacer = result[1]
             self.piece_a_deplacer_pos = pos
@@ -305,7 +313,7 @@ class Plateau():
 
         # Score du joueur
         font2 = pygame.font.SysFont('comicsans', 36)
-        s = 'Score : ' + str(jeu.score)
+        s = 'Score : ' + str(jeu.joueurs[jeu.joueur_courant-1].score)
         text = font2.render(s, True, NOIR)
         screen.blit(text, (25, TOP_MARGIN + 16*self.hCell + 10))
 
@@ -344,7 +352,7 @@ class Plateau():
                 self.button_pressed = False
                 self.button_action = True
 
-    def print_status(self, screen, message, type="error"):
+    def print_status(self, screen, message, type="info"):
         font = pygame.font.SysFont('comicsans', 20)
         if type=="error":
             text = font.render(message, True, ROUGE)

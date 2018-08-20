@@ -50,14 +50,17 @@ def main():
 
     if args.input!=None:
         jeu = Jeu(args.input, args.nombre_joueurs)
-        plateau.validation(jeu.joueur[0].provisoire)
+        for j in jeu.joueurs:
+            plateau.validation(j.provisoire)
     else:
         jeu = Jeu(args.nombre_joueurs)
 
     #####################
     # Boucle principale #
     #####################
-    jeu.tirage_au_sort()
+    for i in range(len(jeu.joueurs)):
+        jeu.tirage_au_sort(i+1, False)
+
     continuer = True
     piece_deplacee = None
     while continuer:
@@ -69,9 +72,10 @@ def main():
                 if event.key == pygame.K_v: # Capture console
                     print(jeu)
                 elif event.key == pygame.K_s: # Sauvegarde fichier
-                    jeu.sauvegarder()
+                    filename = jeu.sauvegarder()
+                    plateau.print_status(screen, 'Sauvegarde dans '+filename, type='info')
             elif event.type == pygame.MOUSEBUTTONDOWN: # Début de déplacement
-                piece_deplacee = plateau.start_move(event.pos, jeu.joueur[0])
+                piece_deplacee = plateau.start_move(event.pos, jeu)
                 if piece_deplacee == None:
                     plateau.check_button(event.pos, True)
             elif event.type == pygame.MOUSEMOTION: 
@@ -81,7 +85,7 @@ def main():
                 if piece_deplacee != None: # Fin de déplacement
                     dst = plateau.get_cell_name(event.pos)
                     if dst!=None:
-                        jeu.deplacement(dst, piece_deplacee)
+                        jeu.deplacer_piece(dst, piece_deplacee)
                     plateau.end_move()
                     piece_deplacee = None
                 else:
@@ -92,7 +96,7 @@ def main():
 
         # Afficher les lettres du joueur sur le chevalet et celles
         # en placement provisoire sur le plateau
-        plateau.afficher_joueur(screen, jeu.joueur[0])
+        plateau.afficher_joueur_courant(screen, jeu)
 
         # Afficher la lettre en cours de déplacement
         if piece_deplacee != None:
@@ -108,8 +112,8 @@ def main():
                 set_message(result[1], 3)
             elif result[1]!="": # Coup valide
                 set_message(result[1], 3, "info")
-                plateau.validation(jeu.joueur[0].provisoire)
-                jeu.tirage_au_sort()
+                plateau.validation(jeu)
+                jeu.tirage_au_sort(jeu.joueur_courant)
 
         update_message(screen, plateau)
 

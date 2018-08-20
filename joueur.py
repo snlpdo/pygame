@@ -4,6 +4,7 @@ class Joueur():
 	def __init__(self):
 		self.provisoire = []
 		self.chevalet = [[None for i in range(9)]]
+		self.score = 0
 
 		Joueur.nb += 1
-		self.idx = Joueur.nb
+		self.num = Joueur.nb
