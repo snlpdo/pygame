@@ -42,7 +42,7 @@ class Jeu():
 			self.tour_jeu = int(input.readline())
 
 			nombre_joueurs = int(input.readline()) 
-			self.joueurs = [Joueur() for i in range(nb_joueurs)]
+			self.joueurs = [Joueur() for i in range(nb_joueurs+1)]
 
 			self.joueur_courant = int(input.readline())
 
@@ -117,9 +117,14 @@ class Jeu():
 		for j in self.joueurs:
 			out.write(str(j.score)+'\n')
 			for l in j.chevalet[0]:
-				if l!=None: out.write(l.char)
+				if l!=None: 
+					if l.char==' ': out.write('?')
+					else: out.write(l.char)
 			for l in j.provisoire:
-				out.write(l.char)
+				if l!=None: 
+					if l.char==' ': out.write('?')
+					else: out.write(l.char)
+			out.write('\n')
 
 		out.write('\n')
 		out.close()
@@ -364,7 +369,8 @@ class Jeu():
 		scrabble = len(joueur.provisoire)==7
 		if scrabble: 
 			joueur.score += 50
-			msg_h = 'SCRABBLE (50 points): ' + msg
+			msg = 'SCRABBLE (50 points): ' + msg
+
 		return (True, msg)
 
 	def identifier_mot_horizontal(self, x, y, joueur):
