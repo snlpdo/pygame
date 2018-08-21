@@ -1,8 +1,9 @@
 import random
+import time
 
 from joueur import *
 from lettre import *
-import time
+from reseau import Reseau
 
 LIGNES = "ABCDEFGHIJKLMNO"
 
@@ -25,26 +26,31 @@ class Jeu():
          ["  ","MD","  ","  ","  ","LT","  ","  ","  ","LT","  ","  ","  ","MD","  "],
          ["MT","  ","  ","LD","  ","  ","  ","MT","  ","  ","  ","LD","  ","  ","MT"]]
 
-	def __init__(self, nb_joueurs, plateau=None, filename=None):
+	def __init__(self, nb_joueurs, plateau=None, filename=None, reseau=None):
 		""" Contruire un nouveau jeu original ou chargé depuis un fichier de 
 		sauvegarde. """
 
+		# Création de la pioche globale
 		self.grille = [ ["" for x in range(15)] for y in range(15)]
 		self.pioche = Lettre.get_pioche()
 
-		if filename==None: # Nouvelle partie
+		self.joueur_actuel = 1
+		self.joueur_local = 1
+		if reseau!=None and not(reseau.premier_joueur):
+			self.joueur_local=2
+
+		if filename==None or reseau!=None: # Nouvelle partie
 			self.tour_jeu = 1
 			self.joueurs = [Joueur() for i in range(nb_joueurs)]
-			self.joueur_courant = 1
 		else: # charger depuis le fichier
 			input = open(filename, "r")
 
 			self.tour_jeu = int(input.readline())
 
 			nombre_joueurs = int(input.readline()) 
-			self.joueurs = [Joueur() for i in range(nb_joueurs+1)]
+			self.joueurs = [Joueur() for i in range(nb_joueurs)]
 
-			self.joueur_courant = int(input.readline())
+			self.joueur_actuel = int(input.readline())
 
 			for i in range(15): 
 				ligne = input.readline()
@@ -100,7 +106,7 @@ class Jeu():
 		out.write(str(len(self.joueurs)) + '\n')
 
 		# Joueur courant
-		out.write(str(self.joueur_courant) + '\n')
+		out.write(str(self.joueur_actuel) + '\n')
 
 		# Grille
 		for i in range(15):
@@ -131,39 +137,81 @@ class Jeu():
 
 		return filename
 
-	def tirage_au_sort(self, jnum, incr_tour=True):
+	def tirer_au_sort(self, jnum, incr_tour=True):
 		""" Tirer au sort les lettres d'un joueur spécifique. """
 
-		joueur = self.joueurs[jnum-1]
+		tirage = [] # mémoire du tirage
 
-		# Supprimer les pièces en attente
-		joueur.provisoire = []
+		# joueur concerné
+		joueur = self.joueurs[jnum-1] 
+		joueur.provisoire = [] # Supprimer les pièces en attente
 
-		# Compter le nombre pièces initiale sur le chevalet
-		compte = 0
-		for l in joueur.chevalet[0]:
-			if l!=None: compte += 1
+		# Nombre pièces initiales sur le chevalet
+		compte = self.taille_chevalet(joueur)
 
 		# Remplir le chevalet
-		while compte<7:
+		while compte<7 and len(self.pioche)>0:
+			# Retirer une lettre de la pioche
 			random.shuffle(self.pioche)
-			c = self.pioche.pop()
+			c = self.pioche.pop() 
+
+			# Créer la lettre 
 			lettre = Lettre(c)
 
-			i=0
-			while joueur.chevalet[0][i]!=None: i += 1
-			lettre.pos = 'Q' + str(i+4)
-			joueur.chevalet[0][i] = lettre
+			# Mémoriser progressivement le tirage
+			tirage.append(c) 
 
-			compte = 0
-			for l in joueur.chevalet[0]:
-				if l!=None: compte += 1
+			# Ajouter au chevalet
+			self.ajouter_chevalet(joueur, lettre)
+
+			# Comptabiliser le nombre de lettre sur le chevalet
+			compte = self.taille_chevalet(joueur)
 
 		# Tour suivant
 		if incr_tour:
 			self.tour_jeu += 1
-			self.joueur_courant += 1
-			if self.joueur_courant>len(self.joueurs): self.joueur_courant=1
+			self.joueur_actuel += 1
+			if self.joueur_actuel>len(self.joueurs): self.joueur_actuel=1
+
+		return tirage
+
+	def taille_chevalet(self, joueur):
+		""" Comptabiliser le nombre de cases occupées sur le chevalet
+		du joueur. """
+
+		nombre = 0
+		for l in joueur.chevalet[0]:
+			if l!=None: nombre += 1
+		return nombre
+
+	def ajouter_chevalet(self, joueur, lettre):
+		""" Poser une lettre sur la première case libre du chevalet du joueur """		
+
+		# Trouver la première case vide
+		i=0
+		while joueur.chevalet[0][i]!=None: i += 1
+
+		# Poser la lettre à cette place
+		lettre.pos = 'Q' + str(i+4)
+		joueur.chevalet[0][i] = lettre
+
+		# Comptabiliser le nombre de lettre sur le chevalet
+		compte = self.taille_chevalet(joueur)
+
+	def affecter_tirage(self, jnum, tirage, incr_tour=True):
+		joueur = self.joueurs[jnum-1] 
+		joueur.provisoire = [] # Supprimer les pièces en attente
+
+		for c in tirage:
+			lettre = Lettre(c) # créer la lettre
+			del self.pioche[self.pioche.index(c)] # retirer de la pioche
+			self.ajouter_chevalet(joueur, lettre)
+
+		# Tour suivant
+		if incr_tour:
+			self.tour_jeu += 1
+			self.joueur_actuel += 1
+			if self.joueur_actuel>len(self.joueurs): self.joueur_actuel=1
 
 	def __str__(self):
 		""" État actuel du jeu dans une chaîne de caractères """
@@ -207,7 +255,7 @@ class Jeu():
 			s += '   ' + '-'*(2+len(j.chevalet[0])) + '\n'
 
 		# Joueur courant:
-		s += '\n Joueur courant: ' + str(self.joueur_courant)
+		s += '\n Joueur courant: ' + str(self.joueur_actuel)
 
 		return s
 
@@ -217,12 +265,12 @@ class Jeu():
 
 		return LIGNES[y] + str(x+1)
 
-	def get_cell_info(self, cell_name):
+	def get_cell_info(self, jnum, cell_name):
 		""" Fournir les coordonnées et l'état d'une cellule visible (grille ou
 		chevalet du joueur courant) depuis son label. """ 
 
 		if cell_name[0]=='Q': # Chevalet du joueur courant
-			joueur = self.joueurs[self.joueur_courant-1]
+			joueur = self.joueurs[jnum-1]
 			i = 0
 			j = int(cell_name[1:])-4
 			if joueur.chevalet[i][j]==None:
@@ -237,40 +285,47 @@ class Jeu():
 			else:
 				return (self.grille, (j, i), True)
 
-	def free_cell(self, cell_name):
+	def free_cell(self, jnum, cell_name):
 		""" Réinitialisation une cellule visible (grille ou 
 		chevalet du joueur courant)"""
 
 		if cell_name[0]=='Q': # zone de chevalet
 			i = 0
 			j = int(cell_name[1:])-4
-			self.joueurs[self.joueur_courant-1].chevalet[i][j]=None
+			self.joueurs[jnum-1].chevalet[i][j]=None
 		else: # zone de jeu
 			i = LIGNES.index(cell_name[0])
 			j = int(cell_name[1:])-1
 			self.grille[i][j] == ""
 
-	def deplacer_piece(self, destination, piece):
+	def deplacer_piece(self, jnum, destination, piece, force=False):
 		""" Déplacer une pièce sur le jeur (grille ou
 		chevalet du joueur courant). """
 
-		dst_zone, dst_idx, dst_busy = self.get_cell_info(destination)
-		src_zone, src_idx, src_busy = self.get_cell_info(piece.pos)
+		dst_zone, dst_idx, dst_busy = self.get_cell_info(jnum, destination)
+		src_zone, src_idx, src_busy = self.get_cell_info(jnum, piece.pos)
 
-		joueur = self.joueurs[self.joueur_courant-1]
+		joueur = self.joueurs[jnum-1]
+
 		if src_zone==joueur.chevalet and dst_zone==self.grille: # Chevalet vers grille
+			if not(force) and self.joueur_local != self.joueur_actuel:
+				return False
+
 			if dst_busy: return False # destination occupée
 
-			self.free_cell(piece.pos) # libérer ancienne place
+			self.free_cell(jnum, piece.pos) # libérer ancienne place
 
 			# Nouvelle piece en placement provisoire
 			joueur.chevalet[src_idx[1]][src_idx[0]] = None
 			self.grille[dst_idx[1]][dst_idx[0]] = piece.char
 			joueur.provisoire.append(piece)
 		elif src_zone==self.grille and dst_zone==joueur.chevalet: # Grille vers chevalet
+			if not(force) and self.joueur_local != self.joueur_actuel:
+				return False
+
 			if dst_busy: return False # destination occupée
 
-			self.free_cell(piece.pos) # libérer ancienne place
+			self.free_cell(jnum, piece.pos) # libérer ancienne place
 
 			# Déplacement de la grille vers la zone de chevalet
 			self.grille[src_idx[1]][src_idx[0]] = ""
@@ -283,26 +338,29 @@ class Jeu():
 				joueur.chevalet[src_idx[1]][src_idx[0]], joueur.chevalet[dst_idx[1]][dst_idx[0]] = \
 				  joueur.chevalet[dst_idx[1]][dst_idx[0]], joueur.chevalet[src_idx[1]][src_idx[0]]
 			else:
-				self.free_cell(piece.pos) # libérer ancienne place
+				self.free_cell(jnum, piece.pos) # libérer ancienne place
 				joueur.chevalet[src_idx[1]][src_idx[0]] = None
 				joueur.chevalet[dst_idx[1]][dst_idx[0]] = piece
 		else: # Déplacement dans la grille
+			if not(force) and self.joueur_local != self.joueur_actuel:
+				return False
+
 			if dst_busy: return False # destination occupée
 
-			self.free_cell(piece.pos) # libérer ancienne place
+			self.free_cell(jnum, piece.pos) # libérer ancienne place
 
 			self.grille[src_idx[1]][src_idx[0]] = ""
 			self.grille[dst_idx[1]][dst_idx[0]] = piece.char
+		
 		piece.pos = destination
-
 		return True
 
-	def validation(self):
+	def validation(self, jnum):
 		""" Vérifier que le coup du joueur courant est valide.
 		Pour le moment aucune vérification du/des mot(s) dans
 		une dictionnaire n'est réalisée """
 
-		joueur = self.joueurs[self.joueur_courant-1]
+		joueur = self.joueurs[jnum-1]
 
 		# Vérifier qu'une pièce a été posée
 		if len(joueur.provisoire)==0:
@@ -314,7 +372,7 @@ class Jeu():
 		vertical = True
 		xmin, xmax, ymin, ymax =15, 0, 15, 0
 		for i in range(len(joueur.provisoire)):
-			zone, c, b = self.get_cell_info(joueur.provisoire[i].pos)
+			zone, c, b = self.get_cell_info(jnum, joueur.provisoire[i].pos)
 			if i==0:
 				x, y = c[0], c[1]
 				xmin, xmax, ymin, ymax = x, x, y, y
@@ -357,7 +415,7 @@ class Jeu():
 
 		# Identifier les mots perpendiculaires supplémentaires
 		for l in joueur.provisoire:
-			zone, c, busy = self.get_cell_info(l.pos)
+			zone, c, busy = self.get_cell_info(jnum, l.pos)
 			if horizontal:
 				res = self.identifier_mot_vertical(c[0], c[1], joueur)
 			else:

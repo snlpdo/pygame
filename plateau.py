@@ -197,21 +197,33 @@ class Plateau():
 
         return b
 
-    def afficher_joueur_courant(self, screen, jeu):
-        """ Dessine les pièces du joueur en ajoutant un point bleu 
-        dans le coin supérieur gauche:
-        - celles dans le chevalet.
-        - celles sur le plateau en attente de validation.
+    def afficher_lettres_provisoires(self, screen, jeu):
+        """ Dessiner les pièces du joueur actuel en placement
+        provisoire en ajoutant un point bleu ou rouge 
+        dans le coin supérieur gauche selon qu'il s'agisse du joueur
+        local ou non.
+        """ 
+        joueur = jeu.joueurs[jeu.joueur_actuel-1]
 
-        INPUT:
-        - écran contenant le plateau
-        - liste 2D contenant les pièces sur le chevalet
-          (la pièce en court de déplacement ne sera pas prise en compte).
-        - file contenant les pièces posées sur le jeu mais pas encore
-          validées.
+        for l in joueur.provisoire:
+            if l != self.piece_a_deplacer:
+                if l.img == None:
+                    l.creer_image((self.wCell, self.hCell))
+                x, y = self.get_cell_orig(l.pos)
+                screen.blit(l.img, (x, y))
+                if jeu.joueur_local == jeu.joueur_actuel:
+                    couleur = BLEU
+                else:
+                    couleur = ROUGE
+                pygame.draw.rect(screen, couleur, (x+5,y+5, 5, 5))
+
+
+    def afficher_lettres_chevalet(self, screen, jeu):
+        """ Dessiner les pièces du joueur local sur le chevalet
+        en ajoutant un point bleu dans le coin supérieur gauche.
         """ 
         
-        joueur = jeu.joueurs[jeu.joueur_courant-1]
+        joueur = jeu.joueurs[jeu.joueur_local-1]
 
         font = pygame.font.SysFont('comicsans', 18)
         text = font.render('Joueur '+str(joueur.num), True, NOIR)
@@ -223,13 +235,39 @@ class Plateau():
                 x, y = self.get_cell_orig(l.pos)
                 screen.blit(l.img, (x,y))
                 pygame.draw.rect(screen, BLEU, (x+5,y+5, 5, 5))
-        for l in joueur.provisoire:
-            if l != self.piece_a_deplacer:
-                if l.img == None:
-                    l.creer_image((self.wCell, self.hCell))
-                x, y = self.get_cell_orig(l.pos)
-                screen.blit(l.img, (x, y))
-                pygame.draw.rect(screen, BLEU, (x+5,y+5, 5, 5))
+
+    def afficher_stat(self, screen, jeu):
+        font = pygame.font.SysFont('comicsans', 24)
+        fontG = pygame.font.SysFont('comicsans', 36)
+
+        # État de la pioche
+        s = 'Tour: ' + str(jeu.tour_jeu) 
+        if len(jeu.pioche)>1:
+            s += ' (' + str(len(jeu.pioche)) + ' lettres restantes)'
+        else:
+            s += ' (' + str(len(jeu.pioche)) + ' lettre restante'
+        if jeu.joueur_local==jeu.joueur_actuel:
+            s += ' - À vous de jouer'
+        else:
+            s += ' - À votre adversaire de jouer'
+        text = font.render(s , True, NOIR)
+        screen.blit(text, (20, 5))
+
+        # Scores des joueurs
+        if len(jeu.joueurs)>1:
+            s = 'Scores:'
+        else:
+            s = 'Score:'
+        textT = fontG.render(s, True, NOIR)
+        screen.blit(textT, (25, TOP_MARGIN + 15*self.hCell+25))
+
+        for i, item in enumerate(jeu.joueurs):
+            s = 'J'+str(i+1) + '=' + str(jeu.joueurs[i].score)
+            if i==jeu.joueur_local-1:
+                text = font.render(s, True, ROUGE)
+            else:
+                text = font.render(s, True, NOIR)
+            screen.blit(text, (40, TOP_MARGIN + 15*self.hCell +25 + textT.get_height()+5 + i*20))
 
     def validation(self, joueur):
         """ Enregistrer dans l'image du plateau le coup joué par le joueur
@@ -263,7 +301,7 @@ class Plateau():
     def can_move(self, pos, jeu):
         """ Indique si la position indiquée correspond à une case contenant pièce
             pouvant se déplacer """
-        joueur = jeu.joueurs[jeu.joueur_courant-1]
+        joueur = jeu.joueurs[jeu.joueur_local-1]
 
         cell_name =  self.get_cell_name(pos)
         if cell_name!=None:
@@ -304,35 +342,6 @@ class Plateau():
 
     def end_move(self):
         self.piece_a_deplacer = None
-
-    def afficher_stat(self, screen, jeu):
-        font = pygame.font.SysFont('comicsans', 24)
-        fontG = pygame.font.SysFont('comicsans', 36)
-
-        # État de la pioche
-        s = 'Tour: ' + str(jeu.tour_jeu) 
-        if len(jeu.pioche)>1:
-            s += ' (' + str(len(jeu.pioche)) + ' lettres restantes)'
-        else:
-            s += ' (' + str(len(jeu.pioche)) + ' lettre restante'
-        text = font.render(s , True, NOIR)
-        screen.blit(text, (20, 5))
-
-        # Scores des joueurs
-        if len(jeu.joueurs)>1:
-            s = 'Scores:'
-        else:
-            s = 'Score:'
-        textT = fontG.render(s, True, NOIR)
-        screen.blit(textT, (25, TOP_MARGIN + 15*self.hCell+25))
-
-        for i, item in enumerate(jeu.joueurs):
-            s = 'J'+str(i+1) + '=' + str(jeu.joueurs[i].score)
-            if i==jeu.joueur_courant-1:
-                text = font.render(s, True, ROUGE)
-            else:
-                text = font.render(s, True, NOIR)
-            screen.blit(text, (40, TOP_MARGIN + 15*self.hCell +25 + textT.get_height()+5 + i*20))
 
     def bouton_validation(self, screen):
         pygame.draw.rect(screen, LIGHTGRAY, (self.bx0, self.by0, self.bw, self.bh))
