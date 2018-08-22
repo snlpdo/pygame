@@ -78,6 +78,14 @@ class Reseau():
         message = param + '=' + valeur
         self.sock.sendall(bytes(message, 'ascii'))
 
+    def envoyer_multiple(self, params, valeurs):
+        message = ''
+        for i in range(len(params)):
+            message += params[i] + '=' + valeurs[i]
+            if i<len(params)-1:
+                message += '&'
+        self.sock.sendall(bytes(message, 'ascii'))
+
     def recevoir(self, nbBytes):
         message = self.sock.recv(nbBytes).decode('ascii').split('=')
         return message
@@ -96,7 +104,7 @@ class Reception(Thread):
 
     def run(self):
         while True:
-            message = self.socket.recv(1024).decode('ascii').split('=')
+            messages = self.socket.recv(1024).decode('ascii').split('&')
 
             # numéro de joueur de l'adversaire
             if self.jeu.joueur_local==1:
@@ -104,24 +112,30 @@ class Reception(Thread):
             else:
                 joueur_num = 1
 
-            if message[0]=='move':
-                move = message[1].split(',')
-                src = move[0]
-                dst = move[1]
+            for message in messages:
+                message = message.split('=')
 
-                if src[0]=='Q': # pièce depuis le chevalet
-                    piece = self.jeu.joueurs[joueur_num-1].chevalet[0][int(src[1:])-4]
-                else: # pièce déjà sur le plateau
-                    for l in self.jeu.joueurs[joueur_num-1].provisoire:
-                        if l.pos == src:
-                            piece = l
-                            break
-                self.jeu.deplacer_piece(joueur_num, dst, piece, True)
-            elif message[0]=='validation':
-                result = self.jeu.validation(joueur_num)
-                self.plateau.validation(self.jeu.joueurs[joueur_num-1])
-            elif message[0]=='tirage':
-                self.jeu.affecter_tirage(self.jeu.joueur_actuel, message[1], True)
+                print(message)
+                if message[0]=='move':
+                    move = message[1].split(',')
+                    src = move[0]
+                    dst = move[1]
+
+                    if src[0]=='Q': # pièce depuis le chevalet
+                        piece = self.jeu.joueurs[joueur_num-1].chevalet[0][int(src[1:])-4]
+                    else: # pièce déjà sur le plateau
+                        for l in self.jeu.joueurs[joueur_num-1].provisoire:
+                            if l.pos == src:
+                                piece = l
+                                break
+                    self.jeu.deplacer_piece(joueur_num, dst, piece, True)
+                elif message[0]=='validation':
+                    result = self.jeu.validation(joueur_num)
+                    self.plateau.validation(self.jeu.joueurs[joueur_num-1])
+                elif message[0]=='tirage':
+                    self.jeu.affecter_tirage(self.jeu.joueur_actuel, message[1], True)
+                elif message[0]=='message':
+                    self.plateau.set_message(message[1], 'info')
 
     def stop(self):
         self.continer = False

@@ -370,16 +370,8 @@ class Jeu():
 		piece.pos = destination
 		return True
 
-	def validation(self, jnum):
-		""" Vérifier que le coup du joueur courant est valide.
-		Pour le moment aucune vérification du/des mot(s) dans
-		une dictionnaire n'est réalisée """
-
+	def __dir_principale(self, jnum):
 		joueur = self.joueurs[jnum-1]
-
-		# Vérifier qu'une pièce a été posée
-		if len(joueur.provisoire)==0:
-			return (False, "Aucune pièce n'a été placée sur le jeu")
 
 		# Déterminer la direction principale
 		x, y = 0,0
@@ -400,6 +392,73 @@ class Jeu():
 					horizontal = False
 					if c[1]<ymin: ymin=c[1]
 					if c[1]>ymax: ymax=c[1]
+
+		return (horizontal, vertical, xmin, ymin, xmax, ymax)
+
+	def compter_points(self):
+		joueur = self.joueurs[self.joueur_actuel-1]
+
+		if len(joueur.provisoire)==0: return 0 # aucune lettre
+
+		# Direction principale
+		horizontal, vertical, xmin, ymin, xmax, ymax = self.__dir_principale(self.joueur_actuel)
+		if not(horizontal) and not(vertical): # Mot invalide
+			return 0
+		if horizontal and vertical: # 1 seule lettre posée
+			# Trouver l'orientation grâce au contexte
+			if (xmin>0 and self.grille[ymin][xmin-1]!='') or (xmin<14 and self.grille[ymin][xmin+1]!=''):
+				horizontal = True
+			elif (ymin>0 and self.grille[ymin-1][xmin]!='') or (ymin<14 and self.grille[ymin+1][xmin]!=''):
+				vertical = True
+			else:
+				return 0
+			
+		# Vérifier la position du mot
+		if self.tour_jeu == 1:
+			positionOK = False
+			for p in joueur.provisoire:
+				if p.pos == "H8":
+					positionOK = True
+			if not(positionOK):
+				return 0
+
+		total = 0
+		if horizontal:
+			res = self.identifier_mot_horizontal(xmin,ymin, joueur)
+		else:
+			res = self.identifier_mot_vertical(xmin,ymin, joueur)
+		total += res[1]
+
+		# Identifier les mots perpendiculaires supplémentaires
+		for l in joueur.provisoire:
+			zone, c, busy = self.get_cell_info(self.joueur_actuel, l.pos)
+			if horizontal:
+				res = self.identifier_mot_vertical(c[0], c[1], joueur)
+			else:
+				res = self.identifier_mot_horizontal(c[0], c[1], joueur)
+			if res[1] != 0:
+				total += res[1]
+
+		scrabble = len(joueur.provisoire)==7
+		if scrabble: 
+			total.score += 50
+
+		return total
+
+
+	def validation(self, jnum):
+		""" Vérifier que le coup du joueur courant est valide.
+		Actuellement, aucune vérification du/des mot(s) dans
+		une dictionnaire n'est réalisée. """
+
+		joueur = self.joueurs[jnum-1]
+
+		# Vérifier qu'une pièce a été posée
+		if len(joueur.provisoire)==0:
+			return (False, "Aucune pièce n'a été placée sur le jeu")
+
+		# Déterminer la direction principale
+		horizontal, vertical, xmin, ymin, xmax, ymax = self.__dir_principale(jnum)
 		if not(horizontal) and not(vertical): # Mot invalide
 			return (False, "Le nouveau mot n'est ni vertical ni horizontal")
 		if horizontal and vertical: # 1 seule lettre posée

@@ -11,11 +11,13 @@ class Button():
 		# Texte
 		font = pygame.font.SysFont('comicsans', 36)
 		self.text = font.render(text, True, FOREGROUND)
-		self.button_checked = False
+
+		self.subtext = None
+
 		self.bx0 = orig[0]
 		self.by0 = orig[1]
 		self.bw = self.text.get_width()+20
-		self.bh = self.text.get_height()+10
+		self.bh = self.text.get_height()*2
 		self.pressed = False
 		self.action = False
 
@@ -26,7 +28,12 @@ class Button():
 	    pygame.draw.rect(screen, BACKGROUND, (self.bx0, self.by0, self.bw, self.bh))
 
 	    # Texte
-	    screen.blit(self.text, (self.bx0+10, self.by0+5))
+	    if self.subtext!=None:
+		    screen.blit(self.text, (self.bx0+10, self.by0+5))
+		    screen.blit(self.subtext, (self.bx0 + self.bw/2 - self.subtext.get_width()/2, 
+		    	self.by0+5 + self.text.get_height()))
+	    else:
+	    	screen.blit(self.text, (self.bx0+10, self.by0+self.bh/2-self.text.get_height()/2))
 
 	    # Contours
 	    if self.pressed:
@@ -43,6 +50,13 @@ class Button():
 	        pygame.draw.lines(screen, CONTOUR_DESSOUS, False, 
 	          [(self.bx0, self.by0+self.bh), (self.bx0+self.bw, self.by0+self.bh), 
 	          (self.bx0+self.bw, self.by0)], 2)
+
+	def set_subtext(self, text):
+		if text!=None:
+			font = pygame.font.SysFont('comicsans', 14)
+			self.subtext = font.render(text, True, FOREGROUND)
+		else:
+			self.subtext = None
 
 	def is_clicked(self):
 		""" Vérifier si l'évènement bouton cliqué est survenu. """

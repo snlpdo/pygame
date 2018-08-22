@@ -5,9 +5,7 @@
 #  - Gestion de la lettre cachée du joker
 #  - Vérification des mots dans un dictionnaire
 #  - Fin du jeu
-#  - Affichage du décompte du placement provisoire comme texte du bouton de validation
 #  - réseau: 
-#      * transmettre les messages temporaires à l'adversaire
 #      * démarrer le serveur sur toutes les adresses IPv4
 #      * détection automatique du serveur
 
@@ -24,29 +22,6 @@ from reseau import Reseau
 WIDTH, HEIGHT = 850, 950
 
 fps = 30
-
-message = ""
-msg_time_count = 0
-msg_type = "error"
-
-def set_message(m, mtype='error', nb_sec=3):
-    """ Définir le message à afficher en bas de la fenêtre, 
-    en spécifiant sa durée d'affichage et son type. """
-
-    global message, msg_time_count, msg_type
-
-    message = m
-    msg_time_count = nb_sec*fps
-    msg_type = mtype
-
-def update_message_display(screen, plateau):
-    """ Mettre à jour l'affichage du message """
-
-    global msg_time_count
-
-    if msg_time_count > 0:
-        msg_time_count -= 1
-        plateau.print_message(screen, message, msg_type)
 
 def cli_setup():
     """ Définir et analyser la ligne de commande. """
@@ -90,7 +65,7 @@ def main():
     pygame.display.set_caption(titre)
 
     # Création du plateau
-    plateau = Plateau(screen.get_size(), Jeu.grille_bonus)
+    plateau = Plateau(screen, Jeu.grille_bonus)
 
     # Création du jeu
     jeu = Jeu(args, plateau, reseau)
@@ -133,7 +108,7 @@ def main():
                     print(jeu)
                 elif event.key == pygame.K_s: # Sauvegarde fichier
                     filename = jeu.sauvegarder()
-                    set_message('Sauvegarde dans '+filename, 'info')
+                    plateau.set_message('Sauvegarde dans '+filename, 'info')
             elif event.type == pygame.MOUSEBUTTONDOWN \
               or event.type == pygame.MOUSEMOTION \
               or event.type == pygame.MOUSEBUTTONUP: 
@@ -141,26 +116,27 @@ def main():
 
         # Afficher le plateau (arrière-plan, chevalet, lettre en mouvement, 
         # statistiques)
-        plateau.draw(screen, jeu)
+        plateau.draw(jeu)
         
         # Bouton de validation
-        plateau.afficher_bouton(screen, jeu.joueur_local==jeu.joueur_actuel)
+        plateau.afficher_bouton(jeu.compter_points(), 
+            jeu.joueur_local==jeu.joueur_actuel)
 
         # Clic de validation ?
         if plateau.button.is_clicked():
             result = jeu.validation(jeu.joueur_local)
             if not(result[0]): # Coup non valide
-                set_message(result[1])
+                plateau.set_message(result[1])
             elif result[1]!="": # Coup valide
-                set_message(result[1], 'info')
+                plateau.set_message(result[1], 'info')
                 plateau.validation(jeu.joueurs[jeu.joueur_actuel-1])
                 tirage = jeu.tirer_au_sort(jeu.joueur_actuel)
                 if reseau!=None:
-                    reseau.envoyer('validation', '')
-                    reseau.envoyer('tirage' , ''.join(tirage))
+                    reseau.envoyer_multiple(['message', 'validation', 'tirage'], 
+                        [result[1], '', ''.join(tirage)])
 
         # Message d'information termporaire
-        update_message_display(screen, plateau)
+        plateau.afficher_message()
 
         # Mettre à jour l'écran
         pygame.display.flip()
