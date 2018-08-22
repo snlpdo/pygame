@@ -42,6 +42,19 @@ class Jeu():
 		if args.input==None or reseau!=None: # Nouvelle partie
 			self.tour_jeu = 1
 			self.joueurs = [Joueur() for i in range(args.nombre_joueurs)]
+
+			# Pseudos des joueurs
+			if reseau !=None:
+				if reseau.premier_joueur:
+					self.joueurs[0].pseudo = args.pseudo
+					self.joueurs[1].pseudo = reseau.remote_pseudo
+				else:
+					self.joueurs[0].pseudo = reseau.remote_pseudo
+					self.joueurs[1].pseudo = args.pseudo
+			else:
+				for i, joueur in enumerate(self.joueurs):
+					joueur.pseudo = args.pseudo + str(i+1)
+
 		else:
 			########################################
 			# Charger une partie depuis un fichier #
@@ -57,6 +70,7 @@ class Jeu():
 
 			# Joueur dont c'est le tour
 			self.joueur_actuel = int(input.readline())
+			self.joueur_local = self.joueur_actuel
 
 			# Contenu de la grille: créer les lettres correspondantes,
 			# les enlever de la pioche et les affecter arbitrairement
@@ -77,7 +91,9 @@ class Jeu():
 			plateau.validation(self.joueurs[0])
 
 			# Scores et chevalets des joueurs
-			for joueur in self.joueurs:
+			for i, joueur in enumerate(self.joueurs):
+				joueur.pseudo = args.pseudo + str(i+1)
+
 				# lecture du score
 				joueur.score = int(input.readline())
 				
@@ -258,7 +274,7 @@ class Jeu():
 
 		# Score et chevalet de chaque joueur
 		for j in self.joueurs:
-			s += '\nJoueur '+ str(j.num) +', score: ' + str(j.score) + '\n'
+			s += '\n' + j.pseudo +', score: ' + str(j.score) + '\n'
 			s += '   ' + '-'*(2+len(j.chevalet[0])) + '\n'
 			s += '   |'
 			for i in range(len(j.chevalet[0])):
@@ -441,7 +457,7 @@ class Jeu():
 
 		scrabble = len(joueur.provisoire)==7
 		if scrabble: 
-			total.score += 50
+			total += 50
 
 		return total
 
@@ -515,7 +531,7 @@ class Jeu():
 		xmin += 1 
 		# Extension à droite
 		xmax = x
-		while xmax>=0 and self.grille[y][xmax]!="": xmax += 1
+		while xmax<15 and self.grille[y][xmax]!="": xmax += 1
 		xmax -= 1
 
 		# Ne pas considérer les mots d'une seule lettre
@@ -554,13 +570,13 @@ class Jeu():
 		""" Identifier un mot vertical créé par le joueur courant
 		à partir d'une position donnée. """
 
-		# Extension à gauche
+		# Extension en haut
 		ymin = y
 		while ymin>=0 and self.grille[ymin][x]!='': ymin -= 1
 		ymin += 1 
-		# Extension à droite
+		# Extension en bas
 		ymax = y
-		while ymax>=0 and self.grille[ymax][x]!='': ymax += 1
+		while ymax<15 and self.grille[ymax][x]!='': ymax += 1
 		ymax -= 1
 
 		# Ne pas considérer les mots d'une seule lettre

@@ -5,6 +5,7 @@ class Joueur():
 		self.provisoire = []
 		self.chevalet = [[None for i in range(9)]]
 		self.score = 0
+		self.pseudo = None
 
 		Joueur.nb += 1
 		self.num = Joueur.nb

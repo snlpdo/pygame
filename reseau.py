@@ -115,7 +115,6 @@ class Reception(Thread):
             for message in messages:
                 message = message.split('=')
 
-                print(message)
                 if message[0]=='move':
                     move = message[1].split(',')
                     src = move[0]

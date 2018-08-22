@@ -225,7 +225,7 @@ class Plateau():
         joueur = jeu.joueurs[jeu.joueur_local-1]
 
         font = pygame.font.SysFont('comicsans', 18)
-        text = font.render('Joueur '+str(joueur.num), True, NOIR)
+        text = font.render(joueur.pseudo, True, NOIR)
         self.screen.blit(text, (LEFT_MARGIN+3*self.wCell,TOP_MARGIN+16*self.hCell-20))
         for l in joueur.chevalet[0]:
             if l != None and l != self.piece_a_deplacer:
@@ -276,7 +276,7 @@ class Plateau():
         if jeu.joueur_local==jeu.joueur_actuel:
             s += ' - À vous de jouer'
         else:
-            s += ' - À votre adversaire de jouer'
+            s += ' - À '+ jeu.joueurs[jeu.joueur_actuel-1].pseudo + ' de jouer'
         text = font.render(s , True, NOIR)
         self.screen.blit(text, (20, 5))
 
@@ -288,8 +288,8 @@ class Plateau():
         textT = fontG.render(s, True, NOIR)
         self.screen.blit(textT, (25, TOP_MARGIN + 15*self.hCell+25))
 
-        for i, item in enumerate(jeu.joueurs):
-            s = 'J'+str(i+1) + '=' + str(jeu.joueurs[i].score)
+        for i, joueur in enumerate(jeu.joueurs):
+            s = joueur.pseudo + '=' + str(joueur.score)
             if i==jeu.joueur_local-1:
                 text = font.render(s, True, ROUGE)
             else:

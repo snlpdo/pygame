@@ -55,6 +55,10 @@ def main():
         args.nombre_joueurs = 2 # pour le moment
         reseau = Reseau(args)
         titre = 'Scrabble réseau - ' + args.pseudo
+        if args.serveur: 
+            titre += ' (serveur)'
+        elif args.client: 
+            titre += ' (client)'
     else:
         reseau = None
         titre = 'Scrabble local'
@@ -134,6 +138,8 @@ def main():
                 if reseau!=None:
                     reseau.envoyer_multiple(['message', 'validation', 'tirage'], 
                         [result[1], '', ''.join(tirage)])
+                else:
+                    jeu.joueur_local = jeu.joueur_actuel
 
         # Message d'information termporaire
         plateau.afficher_message()
