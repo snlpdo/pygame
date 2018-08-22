@@ -26,69 +26,84 @@ class Jeu():
          ["  ","MD","  ","  ","  ","LT","  ","  ","  ","LT","  ","  ","  ","MD","  "],
          ["MT","  ","  ","LD","  ","  ","  ","MT","  ","  ","  ","LD","  ","  ","MT"]]
 
-	def __init__(self, nb_joueurs, plateau=None, filename=None, reseau=None):
+	def __init__(self, args, plateau, reseau):
 		""" Contruire un nouveau jeu original ou chargé depuis un fichier de 
 		sauvegarde. """
 
-		# Création de la pioche globale
-		self.grille = [ ["" for x in range(15)] for y in range(15)]
-		self.pioche = Lettre.get_pioche()
+		self.grille = [ ["" for x in range(15)] for y in range(15)] # Grille vide
+		self.pioche = Lettre.get_pioche() # Pioche globale
 
 		self.joueur_actuel = 1
 		self.joueur_local = 1
+
 		if reseau!=None and not(reseau.premier_joueur):
 			self.joueur_local=2
 
-		if filename==None or reseau!=None: # Nouvelle partie
+		if args.input==None or reseau!=None: # Nouvelle partie
 			self.tour_jeu = 1
-			self.joueurs = [Joueur() for i in range(nb_joueurs)]
-		else: # charger depuis le fichier
-			input = open(filename, "r")
+			self.joueurs = [Joueur() for i in range(args.nombre_joueurs)]
+		else:
+			########################################
+			# Charger une partie depuis un fichier #
+			########################################
+			input = open(args.input, "r")
 
+			# Numéro de tour du jeu
 			self.tour_jeu = int(input.readline())
 
-			nombre_joueurs = int(input.readline()) 
+			# Nombre de joueurs
+			nb_joueurs = int(input.readline()) 
 			self.joueurs = [Joueur() for i in range(nb_joueurs)]
 
+			# Joueur dont c'est le tour
 			self.joueur_actuel = int(input.readline())
 
+			# Contenu de la grille: créer les lettres correspondantes,
+			# les enlever de la pioche et les affecter arbitrairement
+			# au premier joueur (pour validation plateau)
 			for i in range(15): 
 				ligne = input.readline()
 				for j in range(15):
-					if ligne[j] == ' ':
+					if ligne[j] == ' ': # cellule vide
 						self.grille[i][j] = ''
-					else:
-						if ligne[j]=='?': 
-							self.grille[i][j] = ' '
-						else:
-							self.grille[i][j] = ligne[j]
-						# enlever de la pioche
-						del self.pioche[self.pioche.index(self.grille[i][j])] 
-						
-						# ajouter dans la liste provisoire du 1er joueur
-						lettre = Lettre(self.grille[i][j]) 
+					else: # cellule occupée
+						lettre = self.creer_lettre(ligne[j])
+						# Placer la lettre sur le jeu
+						self.grille[i][j] = lettre.char 
 						lettre.pos = self.get_cell_name(j, i)
+						# L'attribuer arbitrairement au 1er joueur
 						self.joueurs[0].provisoire.append(lettre)
+			# validation plateau des lettres déjà posées
+			plateau.validation(self.joueurs[0])
 
+			# Scores et chevalets des joueurs
 			for joueur in self.joueurs:
 				# lecture du score
 				joueur.score = int(input.readline())
 				
-				# lecture des lettres du chevalet
+				# lecture des lettres du chevalet: créer les lettres
+				# correspondantes, les enlever de la pioche et les placer
+				# sur le chevalet
 				ligne = input.readline()
 				for j in range(len(ligne)-1): # ne pas lire \n
-					if ligne[j]=='?':
-						c = ' '
-					else:
-						c = ligne[j]
-					# enlever de la pioche
-					del self.pioche[self.pioche.index(c)] 
-					# ajouter sur le chevalet
-					lettre = Lettre(c)
-					lettre.pos = 'Q' + str(j+4)
+					lettre = self.creer_lettre(ligne[j])
+					lettre.pos = 'Q' + str(j+4) # ajouter sur le chevalet
 					joueur.chevalet[0][j] = lettre
 
 			input.close()
+
+	def creer_lettre(self, c):
+		""" Créer l'objet Lettre correspondant au caractère c et enlever
+		cette lettre de la pioche. """
+
+		# Joker
+		if c=='?': c=' '
+
+		# Supprimer de la pioche
+		del self.pioche[self.pioche.index(c)]
+
+		return Lettre(c)
+
 
 	def sauvegarder(self):
 		""" Sauvegarder la partie courant dans un fichier avec dénomé en 
@@ -199,13 +214,13 @@ class Jeu():
 		compte = self.taille_chevalet(joueur)
 
 	def affecter_tirage(self, jnum, tirage, incr_tour=True):
+		""" Attribuer le résultat d'un tirage au chevalet d'un joueur. """
+
 		joueur = self.joueurs[jnum-1] 
 		joueur.provisoire = [] # Supprimer les pièces en attente
 
 		for c in tirage:
-			lettre = Lettre(c) # créer la lettre
-			del self.pioche[self.pioche.index(c)] # retirer de la pioche
-			self.ajouter_chevalet(joueur, lettre)
+			self.ajouter_chevalet(joueur, self.creer_lettre(c))
 
 		# Tour suivant
 		if incr_tour:

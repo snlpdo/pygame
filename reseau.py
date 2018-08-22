@@ -1,48 +1,78 @@
 from threading import Thread
 import random
+import socket
 
 class Reseau():
-    def __init__(self, socket, local_pseudo, start_comm):
-        self.sock = socket
-        self.peer_name = socket.getpeername()
+    def __init__(self, args):
+        if args.serveur: # Mode serveur         
+            print("\n=== Mode réseau (serveur)===")
+            print("Attente de connexion...")
 
-        # Négociation initiale (6 étapes)
-        for i in range(6):
+            ss = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            ss.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            ss.bind( ("192.168.43.16", 7175) )
+            ss.listen(args.nombre_joueurs-1) 
+            
+            # Connexion avec client (1 seul pour le moment)
+            self.sock, dist_sock = ss.accept()
+
+            # Initier le dialogue
+            start_comm = True
+
+        elif args.client: # Mode client
+            print("\n=== Mode réseau (client)===")
+            print("Connexion au serveur "+args.client)
+
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.sock.connect( (args.client, 7175))
+
+            # Attendre l'initiation du dialogue par le serveur
+            start_comm = False
+    
+        # Dialogue initial (4 étapes):
+        # 1) Envoi du pseudo du serveur
+        # 2) Envoi du pseudo du client
+        # 3) Envoi d'un nombre tiré au sort par le réseau
+        # 4) Envoi d'un nombre tiré au sort par le client
+        for i in range(4):
             if i==0 and start_comm or i==1 and not(start_comm):
                 # envoi pseudo local
-                self.envoyer('pseudo', local_pseudo)
+                self.envoyer('pseudo', args.pseudo)
 
             elif i==1 and start_comm or i==0 and not(start_comm):
                 # réception pseudo distant
                 param, self.remote_pseudo = self.recevoir(128)
                 if param!='pseudo':
-                    print("Reçu paramètre "+param+" au lieu de pseudo")
+                    print('Reçu paramètre ' + param + ' au lieu de pseudo')
                     quit()
 
-            elif i==2: 
-                print("Connecté avec", self.remote_pseudo, self.peer_name)
-
-            elif i==3 and start_comm or i==4 and not(start_comm):
+            elif i==2 and start_comm or i==3 and not(start_comm):
                 # envoi random local
                 local_rand = random.random()
                 self.envoyer('priority', str(local_rand))
 
-            elif i==4 and start_comm or i==3 and not(start_comm):
+            elif i==3 and start_comm or i==2 and not(start_comm):
                 # réception random distant
                 param, remote_rand = self.recevoir(128)
                 if param != 'priority' : 
-                    print("Reçu paramètre "+param+" au lieu de priority")
+                    print('Reçu paramètre '+param+' au lieu de priority')
                     quit()
                 remote_rand = float(remote_rand)
 
-            elif i==5:
-                # détermination du 1er joueur
-                if local_rand > remote_rand:
-                    self.premier_joueur = True
-                    print('Je joue en premier')
-                else:
-                    self.premier_joueur = False
-                    print('Je joue en second')
+        # Détermination du 1er joueur (nombre tiré au sort le plus grand)
+        if local_rand > remote_rand:
+            self.premier_joueur = True
+            if self.remote_pseudo==args.pseudo:
+                args.pseudo += '1'
+                self.remote_pseudo += '2'
+            print('Je joue en premier')
+        else:
+            self.premier_joueur = False
+            if self.remote_pseudo==args.pseudo:
+                args.pseudo += '2'
+                self.remote_pseudo += '1'
+            print('Je joue en second')
+        print("Connecté avec", self.remote_pseudo, self.sock.getpeername())
 
     def envoyer(self, param, valeur):
         message = param + '=' + valeur

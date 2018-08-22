@@ -3,6 +3,7 @@ from math import cos, sin, pi
 
 from lettre import *
 from joueur import *
+from button import Button
 
 # Couleurs
 NOIR = (0,0,0)
@@ -12,7 +13,6 @@ ROUGE = (255, 0, 0)
 BLEU = (0, 0, 215)
 CYAN = (50,200,200)
 BLANC = (255, 255, 255)
-LIGHTGRAY = (212, 208, 200)
 
 TOP_MARGIN, RIGHT_MARGIN, BOTTOM_MARGIN, LEFT_MARGIN = 60, 50, 150, 50
 LEGENDE_SEP = 15
@@ -22,9 +22,8 @@ LIGNES = "ABCDEFGHIJKLMNOPQ"
 NB_ROWS, NB_COLS = 15, 15
 
 class Plateau():
-
     def __init__(self, size, bonus):
-        """ Construit un plateau aux bonnes dimensions qui fait
+        """ Construire un plateau aux bonnes dimensions en faisant
         apparaître les différentes cases bonus. 
 
         INPUT:
@@ -40,18 +39,8 @@ class Plateau():
         self.piece_a_deplacer = None
 
         # Bouton de validation
-        font = pygame.font.SysFont('comicsans', 36)
-        self.text_button = font.render('Valider', True, NOIR)
-        self.button_checked = False
-
-        # Font
-        self.bx0 = LEFT_MARGIN + 13*self.wCell
-        self.by0 = TOP_MARGIN + 16*self.hCell + 5
-        self.bw = self.text_button.get_width()+20
-        self.bh = self.text_button.get_height()+10
-        self.button_pressed = False
-        self.button_action = False
-
+        self.button = Button((LEFT_MARGIN + 13*self.wCell, 
+            TOP_MARGIN + 16*self.hCell + 5))
 
     def __draw_bonus_cell(self, type_case, img, area):
         """ Dessine la case bonus appropriée sur une zone spécifique
@@ -197,7 +186,49 @@ class Plateau():
 
         return b
 
-    def afficher_lettres_provisoires(self, screen, jeu):
+    def draw(self, screen, jeu):
+        """ Afficher le contenu du plateau: 
+        - Arrière-plan
+        - Chevalet du joueur local
+        - Lettres sur le jeu en attente de validation
+        - Lettre en cours de déplacement
+        - État du jeu.
+        """
+
+        # Arrière-plan
+        screen.blit(self.img, (0,0))
+
+        # Lettres sur le chevalet du joueur local
+        self.__afficher_lettres_chevalet(screen, jeu)
+
+        # Lettres du joueur actuel en placement provisoire
+        self.__afficher_lettres_provisoires(screen, jeu)
+
+        # Lettre en cours de déplacement
+        self.__afficher_deplacement(screen)
+
+        # Statistique
+        self.__afficher_etat(screen, jeu)
+
+    def __afficher_lettres_chevalet(self, screen, jeu):
+        """ Dessiner les pièces du joueur local sur le chevalet
+        en ajoutant un point bleu dans le coin supérieur gauche.
+        """ 
+        
+        joueur = jeu.joueurs[jeu.joueur_local-1]
+
+        font = pygame.font.SysFont('comicsans', 18)
+        text = font.render('Joueur '+str(joueur.num), True, NOIR)
+        screen.blit(text, (LEFT_MARGIN+3*self.wCell,TOP_MARGIN+16*self.hCell-20))
+        for l in joueur.chevalet[0]:
+            if l != None and l != self.piece_a_deplacer:
+                if l.img == None:
+                    l.creer_image((self.wCell, self.hCell))
+                x, y = self.get_cell_orig(l.pos)
+                screen.blit(l.img, (x,y))
+                pygame.draw.rect(screen, BLEU, (x+5,y+5, 5, 5))
+
+    def __afficher_lettres_provisoires(self, screen, jeu):
         """ Dessiner les pièces du joueur actuel en placement
         provisoire en ajoutant un point bleu ou rouge 
         dans le coin supérieur gauche selon qu'il s'agisse du joueur
@@ -217,35 +248,24 @@ class Plateau():
                     couleur = ROUGE
                 pygame.draw.rect(screen, couleur, (x+5,y+5, 5, 5))
 
+    def __afficher_etat(self, screen, jeu):
+        """ Afficher l'état du jeu (numéro du tour, nombre de lettres restantes,
+        joueur dont c'est le tour) en haut de l'écran et les scores
+        de tous les joueurs en bas de l'écran."""
 
-    def afficher_lettres_chevalet(self, screen, jeu):
-        """ Dessiner les pièces du joueur local sur le chevalet
-        en ajoutant un point bleu dans le coin supérieur gauche.
-        """ 
-        
-        joueur = jeu.joueurs[jeu.joueur_local-1]
+        font = pygame.font.SysFont('comicsans', 24) # petite police
+        fontG = pygame.font.SysFont('comicsans', 36) # grande police
 
-        font = pygame.font.SysFont('comicsans', 18)
-        text = font.render('Joueur '+str(joueur.num), True, NOIR)
-        screen.blit(text, (LEFT_MARGIN+3*self.wCell,TOP_MARGIN+16*self.hCell-20))
-        for l in joueur.chevalet[0]:
-            if l != None and l != self.piece_a_deplacer:
-                if l.img == None:
-                    l.creer_image((self.wCell, self.hCell))
-                x, y = self.get_cell_orig(l.pos)
-                screen.blit(l.img, (x,y))
-                pygame.draw.rect(screen, BLEU, (x+5,y+5, 5, 5))
-
-    def afficher_stat(self, screen, jeu):
-        font = pygame.font.SysFont('comicsans', 24)
-        fontG = pygame.font.SysFont('comicsans', 36)
+        # Numéro du tour
+        s = 'Tour: ' + str(jeu.tour_jeu) 
 
         # État de la pioche
-        s = 'Tour: ' + str(jeu.tour_jeu) 
         if len(jeu.pioche)>1:
             s += ' (' + str(len(jeu.pioche)) + ' lettres restantes)'
         else:
             s += ' (' + str(len(jeu.pioche)) + ' lettre restante'
+
+        # Joueur dont c'est le tour
         if jeu.joueur_local==jeu.joueur_actuel:
             s += ' - À vous de jouer'
         else:
@@ -268,6 +288,16 @@ class Plateau():
             else:
                 text = font.render(s, True, NOIR)
             screen.blit(text, (40, TOP_MARGIN + 15*self.hCell +25 + textT.get_height()+5 + i*20))
+
+    def __afficher_deplacement(self, screen):
+        if self.piece_a_deplacer!=None:
+            pos = (self.piece_a_deplacer_pos[0]-self.piece_a_deplacer_delta[0],
+                self.piece_a_deplacer_pos[1]-self.piece_a_deplacer_delta[1])
+            screen.blit(self.piece_a_deplacer.img, pos)
+
+    def afficher_bouton(self, screen, visible):
+        if visible:
+            self.button.draw(screen)
 
     def validation(self, joueur):
         """ Enregistrer dans l'image du plateau le coup joué par le joueur
@@ -298,7 +328,15 @@ class Plateau():
                 return LIGNES[ligne] + str(colonne+1)
         return None
     
-    def can_move(self, pos, jeu):
+    def handle_mouse_click(self, mouse_event, jeu, reseau):
+        if mouse_event.type == pygame.MOUSEBUTTONDOWN: 
+            return self.__check_start_move(mouse_event, jeu, reseau) # Début ?
+        elif mouse_event.type == pygame.MOUSEMOTION: 
+            return self.__continue_move(mouse_event, jeu, reseau)
+        elif mouse_event.type == pygame.MOUSEBUTTONUP: 
+            return self.__end_move(mouse_event, jeu, reseau)
+
+    def __check_cell(self, pos, jeu):
         """ Indique si la position indiquée correspond à une case contenant pièce
             pouvant se déplacer """
         joueur = jeu.joueurs[jeu.joueur_local-1]
@@ -314,74 +352,63 @@ class Plateau():
                     return (True, t)
         return (False, None)
 
-    def start_move(self, pos, jeu):
-        result = self.can_move(pos, jeu)
+    def __check_start_move(self, mouse_event, jeu, reseau):
+        pos = mouse_event.pos
 
-        if result[0]: # Début de déplacement
-            self.piece_a_deplacer = result[1]
+        case_occupee, piece = self.__check_cell(pos, jeu)
+
+        if case_occupee: # Début de déplacement
+            self.piece_a_deplacer = piece
             self.piece_a_deplacer_pos = pos
-            self.piece_a_deplacer_delta = ((pos[0]-LEFT_MARGIN)%self.wCell, (pos[1]-LEFT_MARGIN)%self.hCell)
-        return result[1]
-
-    def continue_move(self, pos):
-        newpos = [pos[0], pos[1]]
-        if pos[0] < 0:
-            newpos[0] = 0
-        elif pos[0] >= self.size[0]-self.wCell:
-            newpos[0] = self.size[0]-self.wCell-1
-        if pos[1] < 0:
-            newpos[1] = 0
-        elif pos[1] >= self.size[1]-self.hCell:
-            newpos[1] = self.size[1]-self.hCell-1
-        self.piece_a_deplacer_pos = tuple(newpos)
-
-    def draw_move(self, screen):
-        pos = (self.piece_a_deplacer_pos[0]-self.piece_a_deplacer_delta[0],
-            self.piece_a_deplacer_pos[1]-self.piece_a_deplacer_delta[1])
-        screen.blit(self.piece_a_deplacer.img, pos)
-
-    def end_move(self):
-        self.piece_a_deplacer = None
-
-    def bouton_validation(self, screen):
-        pygame.draw.rect(screen, LIGHTGRAY, (self.bx0, self.by0, self.bw, self.bh))
-
-        # Texte
-        screen.blit(self.text_button, (self.bx0+10, self.by0+5))
-
-        # Contours
-        if self.button_pressed:
-            pygame.draw.lines(screen, NOIR, False, 
-                [(self.bx0, self.by0+self.bh), (self.bx0, self.by0), 
-                (self.bx0+self.bw, self.by0)], 2)
-            pygame.draw.lines(screen, (235, 235, 235), False, 
-                [(self.bx0, self.by0+self.bh), (self.bx0+self.bw, self.by0+self.bh), 
-                (self.bx0+self.bw, self.by0)], 2)
+            self.piece_a_deplacer_delta = ((pos[0]-LEFT_MARGIN)%self.wCell, 
+                (pos[1]-LEFT_MARGIN)%self.hCell)
         else:
-            pygame.draw.lines(screen, (235, 235, 235), False, 
-              [(self.bx0, self.by0+self.bh), (self.bx0, self.by0), 
-              (self.bx0+self.bw, self.by0)], 2)
-            pygame.draw.lines(screen, NOIR, False, 
-              [(self.bx0, self.by0+self.bh), (self.bx0+self.bw, self.by0+self.bh), 
-              (self.bx0+self.bw, self.by0)], 2)
+            self.piece_a_deplacer = None
+            self.check_click_on_button(mouse_event)
+        return self.piece_a_deplacer
 
-        if self.button_action:
-            self.button_action = False
-            return True
-        return False
+    def __continue_move(self, mouse_event, jeu, reseau):
+        if self.piece_a_deplacer!=None:
+            pos = mouse_event.pos
+            newpos = [pos[0], pos[1]]
+            if pos[0] < 0:
+                newpos[0] = 0
+            elif pos[0] >= self.size[0]-self.wCell:
+                newpos[0] = self.size[0]-self.wCell-1
+            if pos[1] < 0:
+                newpos[1] = 0
+            elif pos[1] >= self.size[1]-self.hCell:
+                newpos[1] = self.size[1]-self.hCell-1
+            self.piece_a_deplacer_pos = tuple(newpos)
+        return self.piece_a_deplacer
 
-    def check_button(self,pos, startEvent):
-        if (self.bx0 <= pos[0] <self.bx0+self.bw) and (self.by0 <= pos[1] <self.by0+self.bh):
-            if startEvent:
-                self.button_pressed = True
-            else:
-                self.button_pressed = False
-                self.button_action = True
+    def __end_move(self, mouse_event, jeu, reseau):
+        if self.piece_a_deplacer!=None:
+            src = self.piece_a_deplacer.pos
+            dst = self.get_cell_name(mouse_event.pos)
 
-    def print_status(self, screen, message, type="info"):
+            if dst!=None:
+                result = jeu.deplacer_piece(jeu.joueur_local, dst, self.piece_a_deplacer)
+                if result and reseau!=None:
+                    reseau.envoyer('move', src + ',' + dst)
+
+            self.piece_a_deplacer = None
+        else:
+            self.check_click_on_button(mouse_event)
+
+        return self.piece_a_deplacer    
+
+    def check_click_on_button(self, mouse_event):
+        self.button.check_mouse_click(mouse_event)
+
+    def print_message(self, screen, message, type='info'):
+        """ Afficher un message d'information temporaire en bas
+        de la fenêtre. Le type indiqué influence le format 
+        d'affichage """
+
         font = pygame.font.SysFont('comicsans', 20)
-        if type=="error":
+        if type=="error": # texte en rouge
             text = font.render(message, True, ROUGE)
-        else:
+        else: # texte en noir
             text = font.render(message, True, NOIR)
         screen.blit(text, (LEFT_MARGIN, TOP_MARGIN + 17*self.hCell+10))
