@@ -270,11 +270,11 @@ class Plateau():
         if len(jeu.pioche)>1:
             s += ' (' + str(len(jeu.pioche)) + ' lettres restantes)'
         else:
-            s += ' (' + str(len(jeu.pioche)) + ' lettre restante'
+            s += ' (' + str(len(jeu.pioche)) + ' lettre restante)'
 
         # Joueur dont c'est le tour
         if jeu.joueur_local==jeu.joueur_actuel:
-            s += ' - À vous de jouer'
+            s += ' - À vous de jouer ('+jeu.joueurs[jeu.joueur_actuel-1].pseudo+')'
         else:
             s += ' - À '+ jeu.joueurs[jeu.joueur_actuel-1].pseudo + ' de jouer'
         text = font.render(s , True, NOIR)
@@ -314,7 +314,14 @@ class Plateau():
                 self.button.set_subtext(None)
             self.button.draw(self.screen)
 
-    def validation(self, joueur):
+    def vainqueur(self):
+        id_max = 0
+        for i in range(len(self.joueurs)):
+            if self.joueurs[i].score > self.joueurs[id_max].score:
+                id_max = i
+        return id_max+1
+
+    def memoriser(self, joueur):
         """ Enregistrer dans l'image du plateau le coup joué par le joueur
         courant"""
 

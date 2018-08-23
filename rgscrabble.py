@@ -107,13 +107,16 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT: # Fermeture de la fenêtre
                 continuer = False
-            elif event.type == pygame.KEYUP: 
+                if reseau!=None: reseau.reception.stop()
+            elif event.type == pygame.KEYUP:
                 if event.key == pygame.K_v: # Capture console
                     print(jeu)
                 elif event.key == pygame.K_s: # Sauvegarde fichier
                     filename = jeu.sauvegarder()
                     plateau.set_message('Sauvegarde dans '+filename, 'info')
-            elif event.type == pygame.MOUSEBUTTONDOWN \
+                elif jeu.partie_finie:
+                    continuer = False
+            elif not(jeu.partie_finie) and event.type == pygame.MOUSEBUTTONDOWN \
               or event.type == pygame.MOUSEMOTION \
               or event.type == pygame.MOUSEBUTTONUP: 
                 piece_deplacee = plateau.handle_mouse_click(event, jeu, reseau)
@@ -122,27 +125,41 @@ def main():
         # statistiques)
         plateau.draw(jeu)
         
-        # Bouton de validation
-        plateau.afficher_bouton(jeu.compter_points(), 
-            jeu.joueur_local==jeu.joueur_actuel)
+        if not(jeu.partie_finie):
+            # Bouton de validation
+            plateau.afficher_bouton(jeu.compter_points(), 
+                jeu.joueur_local==jeu.joueur_actuel)
 
-        # Clic de validation ?
-        if plateau.button.is_clicked():
-            result = jeu.validation(jeu.joueur_local)
-            if not(result[0]): # Coup non valide
-                plateau.set_message(result[1])
-            elif result[1]!="": # Coup valide
-                plateau.set_message(result[1], 'info')
-                plateau.validation(jeu.joueurs[jeu.joueur_actuel-1])
-                tirage = jeu.tirer_au_sort(jeu.joueur_actuel)
-                if reseau!=None:
-                    reseau.envoyer_multiple(['message', 'validation', 'tirage'], 
-                        [result[1], '', ''.join(tirage)])
-                else:
-                    jeu.joueur_local = jeu.joueur_actuel
+            # Validation du coup ?
+            if plateau.button.is_clicked():
+                result = jeu.validation(jeu.joueur_local)
+                if not(result[0]): # Coup non valide
+                    plateau.set_message(result[1])
+                elif result[1]!="": # Coup valide
+                    plateau.set_message(result[1], 'info')
+                    plateau.memoriser(jeu.joueurs[jeu.joueur_actuel-1])
+                    tirage = jeu.tirer_au_sort(jeu.joueur_actuel)
+                    if reseau!=None:
+                        if tirage=="##FIN##":
+                            reseau.envoyer_multiple(['message', 'validation', 'tirage', 'fin'], 
+                                [result[1], '', ''.join(tirage), ''])
+                            reseau.reception.stop()
+                        else:
+                            reseau.envoyer_multiple(['message', 'validation', 'tirage'], 
+                                [result[1], '', ''.join(tirage)])
+                    else:
+                        jeu.joueur_local = jeu.joueur_actuel
 
         # Message d'information termporaire
         plateau.afficher_message()
+
+        if jeu.partie_finie:
+            v_idx = jeu.vainqueur()
+            message = 'Partie terminée\nLe vainqueur est ' + jeu.joueurs[v_idx+1].pseudo +\
+              '\n('+ jeu.joueurs[v_idx+1].score +' points)\nAppuyer sur une touche pour quitter.'
+            font = pygame.font.SysFont('comicsans', 48)
+            text = font.render(message, True, (255, 0, 0))
+            screen.blit(text, (WIDTH/2-text.get_width()/2, HEIGHT/2-text.get_height()/2))
 
         # Mettre à jour l'écran
         pygame.display.flip()

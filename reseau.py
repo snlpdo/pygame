@@ -101,10 +101,15 @@ class Reception(Thread):
         self.continuer = True
         self.jeu = jeu
         self.plateau = plateau
+        self.socket.settimeout(2) # 2s
 
     def run(self):
-        while True:
-            messages = self.socket.recv(1024).decode('ascii').split('&')
+        while self.continuer:
+            messages = []
+            try:
+                messages = self.socket.recv(1024).decode('ascii').split('&')
+            except:
+                pass # pour timeout
 
             # numéro de joueur de l'adversaire
             if self.jeu.joueur_local==1:
@@ -130,11 +135,14 @@ class Reception(Thread):
                     self.jeu.deplacer_piece(joueur_num, dst, piece, True)
                 elif message[0]=='validation':
                     result = self.jeu.validation(joueur_num)
-                    self.plateau.validation(self.jeu.joueurs[joueur_num-1])
+                    self.plateau.memoriser(self.jeu.joueurs[joueur_num-1])
                 elif message[0]=='tirage':
                     self.jeu.affecter_tirage(self.jeu.joueur_actuel, message[1], True)
                 elif message[0]=='message':
                     self.plateau.set_message(message[1], 'info')
+                elif message[0]=='fin':
+                    self.jeu.terminer_partie()
+                    self.continuer = False
 
     def stop(self):
-        self.continer = False
+        self.continuer = False

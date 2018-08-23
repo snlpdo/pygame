@@ -36,6 +36,8 @@ class Jeu():
 		self.joueur_actuel = 1
 		self.joueur_local = 1
 
+		self.partie_finie = False
+
 		if reseau!=None and not(reseau.premier_joueur):
 			self.joueur_local=2
 
@@ -87,12 +89,12 @@ class Jeu():
 						lettre.pos = self.get_cell_name(j, i)
 						# L'attribuer arbitrairement au 1er joueur
 						self.joueurs[0].provisoire.append(lettre)
-			# validation plateau des lettres déjà posées
-			plateau.validation(self.joueurs[0])
+			# mémoriser les letters posées sur le plateau
+			plateau.memoriser(self.joueurs[0])
 
-			# Scores et chevalets des joueurs
-			for i, joueur in enumerate(self.joueurs):
-				joueur.pseudo = args.pseudo + str(i+1)
+			# Pseudos, scores et chevalets des joueurs
+			for joueur in self.joueurs:
+				joueur.pseudo = input.readline().rstrip()
 
 				# lecture du score
 				joueur.score = int(input.readline())
@@ -152,6 +154,7 @@ class Jeu():
 
 		# Chaque joueur: score puis chevalet + lettres placées
 		for j in self.joueurs:
+			out.write(j.pseudo+'\n')
 			out.write(str(j.score)+'\n')
 			for l in j.chevalet[0]:
 				if l!=None: 
@@ -168,6 +171,13 @@ class Jeu():
 
 		return filename
 
+	def terminer_partie(self):
+		# Décrémenter tous les scores avec les lettres restantes
+		for j in joueurs:
+			for l in j.chevalet[0]:
+				if l!=None: j.score -= (Lettre.alphabet[l.char])[1]
+		self.partie_finie = True
+
 	def tirer_au_sort(self, jnum, incr_tour=True):
 		""" Tirer au sort les lettres d'un joueur spécifique. """
 
@@ -179,6 +189,11 @@ class Jeu():
 
 		# Nombre pièces initiales sur le chevalet
 		compte = self.taille_chevalet(joueur)
+
+		# Vérifier si la partie est finie
+		if compte==0 and len(self.pioche)==0: # Fin
+			self.terminer_partie()
+			return "##FIN##"
 
 		# Remplir le chevalet
 		while compte<7 and len(self.pioche)>0:
@@ -267,6 +282,8 @@ class Jeu():
 			for j in range(len(self.grille[i])):
 				if self.grille[i][j]=="":
 					s += ' |'
+				elif self.grille[i][j]==' ':
+					s += '?|'
 				else:
 					s += self.grille[i][j] + '|'
 			s += '\n ' + '-'*31 + '\n'
@@ -323,11 +340,11 @@ class Jeu():
 		if cell_name[0]=='Q': # zone de chevalet
 			i = 0
 			j = int(cell_name[1:])-4
-			self.joueurs[jnum-1].chevalet[i][j]=None
+			self.joueurs[jnum-1].chevalet[i][j] = None
 		else: # zone de jeu
 			i = LIGNES.index(cell_name[0])
 			j = int(cell_name[1:])-1
-			self.grille[i][j] == ""
+			self.grille[i][j] == ''
 
 	def deplacer_piece(self, jnum, destination, piece, force=False):
 		""" Déplacer une pièce sur le jeur (grille ou
@@ -387,9 +404,12 @@ class Jeu():
 		return True
 
 	def __dir_principale(self, jnum):
-		joueur = self.joueurs[jnum-1]
+		""" Identifier la direction selon laquelle le joueur a placé
+		ses lettres. """
 
-		# Déterminer la direction principale
+		joueur = self.joueurs[jnum-1] # joueur à considérer
+
+		# Déterminer les coordonnées de la ligne englobant les lettres
 		x, y = 0,0
 		horizontal = True
 		vertical = True
@@ -428,7 +448,27 @@ class Jeu():
 				vertical = True
 			else:
 				return 0
-			
+
+		total = 0
+		if horizontal:
+			res = self.identifier_mot_horizontal(xmin,xmax,ymin,joueur)
+		else:
+			res = self.identifier_mot_vertical(xmin,ymin,ymax,joueur)
+		if res[1]==0: return 0
+		total += res[1]
+		mots = [res[0]]
+
+		# Identifier les mots perpendiculaires supplémentaires
+		for l in joueur.provisoire:
+			zone, c, busy = self.get_cell_info(self.joueur_actuel, l.pos)
+			if horizontal:
+				res = self.identifier_mot_vertical(c[0], c[1], c[1], joueur)
+			else:
+				res = self.identifier_mot_horizontal(c[0], c[0], c[1], joueur)
+			if res[1] != 0:
+				total += res[1]
+				mots.append(res[0])
+
 		# Vérifier la position du mot
 		if self.tour_jeu == 1:
 			positionOK = False
@@ -437,30 +477,15 @@ class Jeu():
 					positionOK = True
 			if not(positionOK):
 				return 0
-
-		total = 0
-		if horizontal:
-			res = self.identifier_mot_horizontal(xmin,ymin, joueur)
-		else:
-			res = self.identifier_mot_vertical(xmin,ymin, joueur)
-		total += res[1]
-
-		# Identifier les mots perpendiculaires supplémentaires
-		for l in joueur.provisoire:
-			zone, c, busy = self.get_cell_info(self.joueur_actuel, l.pos)
-			if horizontal:
-				res = self.identifier_mot_vertical(c[0], c[1], joueur)
-			else:
-				res = self.identifier_mot_horizontal(c[0], c[1], joueur)
-			if res[1] != 0:
-				total += res[1]
+		else: # Vérifier que le mot n'est pas isolé
+			if len(mots)==1 and len(mots[0])==len(joueur.provisoire):
+			  return (False, "Le mot ne peut être isolé du reste du jeu")
 
 		scrabble = len(joueur.provisoire)==7
 		if scrabble: 
 			total += 50
 
 		return total
-
 
 	def validation(self, jnum):
 		""" Vérifier que le coup du joueur courant est valide.
@@ -469,7 +494,7 @@ class Jeu():
 
 		joueur = self.joueurs[jnum-1]
 
-		# Vérifier qu'une pièce a été posée
+		# Vérifier qu'au moins une pièce a été posée
 		if len(joueur.provisoire)==0:
 			return (False, "Aucune pièce n'a été placée sur le jeu")
 
@@ -484,8 +509,31 @@ class Jeu():
 			elif (ymin>0 and self.grille[ymin-1][xmin]!='') or (ymin<14 and self.grille[ymin+1][xmin]!=''):
 				vertical = True
 			else:
-				return (False, "La lettre en " + self.get_cell_name(xmin, ymin) + ' ne peut être isolée')
+				return (False, "La lettre en " + self.get_cell_name(xmin, ymin) + ' ne peut pas être isolée')
 		
+		msg = ''
+		if horizontal:
+			res = self.identifier_mot_horizontal(xmin, xmax, ymin, joueur)
+		else:
+			res = self.identifier_mot_vertical(xmin, ymin, ymax, joueur)
+		if res[1]==0: return (False, 'Mot invalide')
+
+		joueur.score += res[1]
+		msg += res[0]+' : '+ str(res[1]) + ' points'
+		mots = [res[0]]
+
+		# Identifier les mots perpendiculaires supplémentaires
+		for l in joueur.provisoire:
+			zone, c, busy = self.get_cell_info(jnum, l.pos)
+			if horizontal:
+				res = self.identifier_mot_vertical(c[0], c[1], c[1], joueur)
+			else:
+				res = self.identifier_mot_horizontal(c[0], c[0], c[1], joueur)
+			if res[1] != 0:
+				joueur.score += res[1]
+				msg += ', ' + res[0]+' : '+ str(res[1]) + ' points'
+				mots.append(res[0])
+
 		# Vérifier la position du mot
 		if self.tour_jeu == 1:
 			positionOK = False
@@ -494,25 +542,9 @@ class Jeu():
 					positionOK = True
 			if not(positionOK):
 				return (False, "Le premier mot ne passe pas par la case H8")
-
-		msg = ''
-		if horizontal:
-			res = self.identifier_mot_horizontal(xmin,ymin, joueur)
-		else:
-			res = self.identifier_mot_vertical(xmin,ymin, joueur)
-		joueur.score += res[1]
-		msg += res[0]+' : '+ str(res[1]) + ' points'
-
-		# Identifier les mots perpendiculaires supplémentaires
-		for l in joueur.provisoire:
-			zone, c, busy = self.get_cell_info(jnum, l.pos)
-			if horizontal:
-				res = self.identifier_mot_vertical(c[0], c[1], joueur)
-			else:
-				res = self.identifier_mot_horizontal(c[0], c[1], joueur)
-			if res[1] != 0:
-				joueur.score += res[1]
-				msg += ', ' + res[0]+' : '+ str(res[1]) + ' points'
+		else: # Vérifier que le mot n'est pas isolé
+			if len(mots)==1 and len(mots[0])==len(joueur.provisoire):
+			  return (False, "Le mot ne peut être isolé du reste du jeu")
 
 		scrabble = len(joueur.provisoire)==7
 		if scrabble: 
@@ -521,16 +553,16 @@ class Jeu():
 
 		return (True, msg)
 
-	def identifier_mot_horizontal(self, x, y, joueur):
+	def identifier_mot_horizontal(self, x1, x2, y, joueur):
 		""" Identifier un mot horizontal créé par le joueur
 		courant à partir d'une position donnée. """
 
 		# Extension à gauche
-		xmin = x
+		xmin = x1
 		while xmin>=0 and self.grille[y][xmin]!="": xmin -= 1
 		xmin += 1 
 		# Extension à droite
-		xmax = x
+		xmax = x2
 		while xmax<15 and self.grille[y][xmax]!="": xmax += 1
 		xmax -= 1
 
@@ -539,7 +571,7 @@ class Jeu():
 
 		for x in range(xmin, xmax+1):
 			if self.grille[y][x]=='':
-				return (False, "Le mot ne doit pas comporter d'espace")
+				return (False, 0)
 
 		# Lire le mot et comptabiliser les points
 		mot = [' ' for x in range(xmin, xmax+1)]
@@ -566,16 +598,16 @@ class Jeu():
 
 		return (''.join(mot), points)
 
-	def identifier_mot_vertical(self, x, y, joueur):
+	def identifier_mot_vertical(self, x, y1, y2, joueur):
 		""" Identifier un mot vertical créé par le joueur courant
 		à partir d'une position donnée. """
 
 		# Extension en haut
-		ymin = y
+		ymin = y1
 		while ymin>=0 and self.grille[ymin][x]!='': ymin -= 1
 		ymin += 1 
 		# Extension en bas
-		ymax = y
+		ymax = y2
 		while ymax<15 and self.grille[ymax][x]!='': ymax += 1
 		ymax -= 1
 
@@ -584,7 +616,7 @@ class Jeu():
 
 		for y in range(ymin, ymax+1):
 			if self.grille[y][x]=='':
-				return (False, "Le mot ne doit pas comporter d'espace")
+				return (False, 0)
 
 		# Lire le mot et comptabiliser les points
 		mot = [' ' for y in range(ymin, ymax+1)]
