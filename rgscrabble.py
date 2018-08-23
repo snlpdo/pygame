@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 
 # À faire:
-#  - pseudo des joueurs dans l'affichage des scores
 #  - Gestion de la lettre cachée du joker
-#  - Vérification des mots dans un dictionnaire
-#  - Fin du jeu
+#  - Vérifier les mots dans un dictionnaire
+#  - Émettre un son lorsque c'est au tour du joueur suivant
 #  - réseau: 
 #      * démarrer le serveur sur toutes les adresses IPv4
 #      * détection automatique du serveur
+#
+# Bugs connus:
+#  - L'écran de fin n'est pas transmis par le réseau
 
 import sys
 import pygame
@@ -61,7 +63,7 @@ def main():
             titre += ' (client)'
     else:
         reseau = None
-        titre = 'Scrabble local'
+        titre = 'Scrabble (local)'
 
     # Initialisation de la fenêtre et de pygame
     pygame.init()
@@ -131,7 +133,9 @@ def main():
             plateau.afficher_bouton(points, 
                 jeu.joueur_local==jeu.joueur_actuel)
 
-            # Validation du coup ?
+            ######################
+            # Clic sur le bouton #
+            ######################
             if plateau.button.is_clicked():
                 result = jeu.valider(jeu.joueur_local)
                 if not(result[0]): # Coup non valide
@@ -155,20 +159,7 @@ def main():
         plateau.afficher_message()
 
         if jeu.partie_finie:
-            v_idx = jeu.vainqueur()-1
-            m_l1 = 'Victoire de ' + jeu.joueurs[v_idx].pseudo + ' ('+\
-             str(jeu.joueurs[v_idx].score) +' points)'
-            m_l2= 'Appuyer sur une touche pour quitter.'
-            font = pygame.font.SysFont('comicsans', 48)
-            text = font.render(m_l1, True, (255, 255, 0))
-            font2 = pygame.font.SysFont('comicsans', 26)
-            text2 = font2.render(m_l2, True, (255, 255, 0))
-
-            pygame.draw.rect(screen, (0,0,0), (WIDTH/2 - text.get_width()/2 -10, 
-                HEIGHT/2 - text.get_height()-10, text.get_width()+20, 
-                text.get_height() + text2.get_height() + 20 ))
-            screen.blit(text, (WIDTH/2-text.get_width()/2, HEIGHT/2-text.get_height()-2))
-            screen.blit(text2, (WIDTH/2-text2.get_width()/2, HEIGHT/2 + 2))
+            plateau.afficher_fin(screen, jeu)
 
         # Mettre à jour l'écran
         pygame.display.flip()

@@ -122,7 +122,6 @@ class Jeu():
 
         return Lettre(c)
 
-
     def sauvegarder(self):
         """ Sauvegarder la partie courant dans un fichier avec dénomé en 
         fonction de l'horodate du moment."""
@@ -506,7 +505,7 @@ class Jeu():
         else: # OK
             joueur = self.joueurs[jnum-1]
             joueur.score += score
-            return (True, 'mots=' + info)
+            return (True, 'mot(s): ' + info)
 
     def identifier_mot(self, horizontal, xmin, xmax, ymin, ymax, joueur):
         """ Identifier un mot selon une direction et un rectangle donnés. """

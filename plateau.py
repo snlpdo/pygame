@@ -442,3 +442,23 @@ class Plateau():
         else: # texte en noir
             text = font.render(self.message, True, NOIR)
         self.screen.blit(text, (LEFT_MARGIN, TOP_MARGIN + 17*self.hCell+10))
+
+    def afficher_fin(self, screen, jeu):
+        """ Affichage de l'écran de fin. """
+
+        v_idx = jeu.vainqueur()-1
+        m_l1 = 'Victoire de ' + jeu.joueurs[v_idx].pseudo + ' ('+\
+         str(jeu.joueurs[v_idx].score) +' points)'
+        m_l2= 'Appuyer sur une touche pour quitter.'
+        font = pygame.font.SysFont('comicsans', 48)
+        text = font.render(m_l1, True, (255, 255, 0))
+        font2 = pygame.font.SysFont('comicsans', 26)
+        text2 = font2.render(m_l2, True, (255, 255, 0))
+
+        width = screen.get_width()
+        height = screen.get_height()
+        pygame.draw.rect(screen, (0,0,0), (width/2 - text.get_width()/2 -10, 
+            height/2 - text.get_height()-10, text.get_width()+20, 
+            text.get_height() + text2.get_height() + 20 ))
+        screen.blit(text, (width/2-text.get_width()/2, height/2-text.get_height()-2))
+        screen.blit(text2, (width/2-text2.get_width()/2, height/2 + 2))
