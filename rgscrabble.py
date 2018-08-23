@@ -127,12 +127,13 @@ def main():
         
         if not(jeu.partie_finie):
             # Bouton de validation
-            plateau.afficher_bouton(jeu.compter_points(), 
+            points, info = jeu.verifier()
+            plateau.afficher_bouton(points, 
                 jeu.joueur_local==jeu.joueur_actuel)
 
             # Validation du coup ?
             if plateau.button.is_clicked():
-                result = jeu.validation(jeu.joueur_local)
+                result = jeu.valider(jeu.joueur_local)
                 if not(result[0]): # Coup non valide
                     plateau.set_message(result[1])
                 elif result[1]!="": # Coup valide
@@ -154,12 +155,20 @@ def main():
         plateau.afficher_message()
 
         if jeu.partie_finie:
-            v_idx = jeu.vainqueur()
-            message = 'Partie terminée\nLe vainqueur est ' + jeu.joueurs[v_idx+1].pseudo +\
-              '\n('+ jeu.joueurs[v_idx+1].score +' points)\nAppuyer sur une touche pour quitter.'
+            v_idx = jeu.vainqueur()-1
+            m_l1 = 'Victoire de ' + jeu.joueurs[v_idx].pseudo + ' ('+\
+             str(jeu.joueurs[v_idx].score) +' points)'
+            m_l2= 'Appuyer sur une touche pour quitter.'
             font = pygame.font.SysFont('comicsans', 48)
-            text = font.render(message, True, (255, 0, 0))
-            screen.blit(text, (WIDTH/2-text.get_width()/2, HEIGHT/2-text.get_height()/2))
+            text = font.render(m_l1, True, (255, 255, 0))
+            font2 = pygame.font.SysFont('comicsans', 26)
+            text2 = font2.render(m_l2, True, (255, 255, 0))
+
+            pygame.draw.rect(screen, (0,0,0), (WIDTH/2 - text.get_width()/2 -10, 
+                HEIGHT/2 - text.get_height()-10, text.get_width()+20, 
+                text.get_height() + text2.get_height() + 20 ))
+            screen.blit(text, (WIDTH/2-text.get_width()/2, HEIGHT/2-text.get_height()-2))
+            screen.blit(text2, (WIDTH/2-text2.get_width()/2, HEIGHT/2 + 2))
 
         # Mettre à jour l'écran
         pygame.display.flip()

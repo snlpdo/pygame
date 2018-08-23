@@ -134,7 +134,7 @@ class Reception(Thread):
                                 break
                     self.jeu.deplacer_piece(joueur_num, dst, piece, True)
                 elif message[0]=='validation':
-                    result = self.jeu.validation(joueur_num)
+                    result = self.jeu.valider(joueur_num)
                     self.plateau.memoriser(self.jeu.joueurs[joueur_num-1])
                 elif message[0]=='tirage':
                     self.jeu.affecter_tirage(self.jeu.joueur_actuel, message[1], True)

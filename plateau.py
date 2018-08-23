@@ -314,13 +314,6 @@ class Plateau():
                 self.button.set_subtext(None)
             self.button.draw(self.screen)
 
-    def vainqueur(self):
-        id_max = 0
-        for i in range(len(self.joueurs)):
-            if self.joueurs[i].score > self.joueurs[id_max].score:
-                id_max = i
-        return id_max+1
-
     def memoriser(self, joueur):
         """ Enregistrer dans l'image du plateau le coup joué par le joueur
         courant"""
