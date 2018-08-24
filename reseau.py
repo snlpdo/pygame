@@ -16,9 +16,6 @@ class Reseau():
             # Connexion avec client (1 seul pour le moment)
             self.sock, dist_sock = ss.accept()
 
-            # Initier le dialogue
-            start_comm = True
-
         elif args.client: # Mode client
             print("\n=== Mode réseau (client)===")
             print("Connexion au serveur "+args.client)
@@ -26,53 +23,10 @@ class Reseau():
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.sock.connect( (args.client, 7175))
 
-            # Attendre l'initiation du dialogue par le serveur
-            start_comm = False
-    
-        # Dialogue initial (4 étapes):
-        # 1) Envoi du pseudo du serveur
-        # 2) Envoi du pseudo du client
-        # 3) Envoi d'un nombre tiré au sort par le réseau
-        # 4) Envoi d'un nombre tiré au sort par le client
-        for i in range(4):
-            if i==0 and start_comm or i==1 and not(start_comm):
-                # envoi pseudo local
-                self.envoyer('pseudo', args.pseudo)
-
-            elif i==1 and start_comm or i==0 and not(start_comm):
-                # réception pseudo distant
-                param, self.remote_pseudo = self.recevoir(128)
-                if param!='pseudo':
-                    print('Reçu paramètre ' + param + ' au lieu de pseudo')
-                    quit()
-
-            elif i==2 and start_comm or i==3 and not(start_comm):
-                # envoi random local
-                local_rand = random.random()
-                self.envoyer('priority', str(local_rand))
-
-            elif i==3 and start_comm or i==2 and not(start_comm):
-                # réception random distant
-                param, remote_rand = self.recevoir(128)
-                if param != 'priority' : 
-                    print('Reçu paramètre '+param+' au lieu de priority')
-                    quit()
-                remote_rand = float(remote_rand)
-
-        # Détermination du 1er joueur (nombre tiré au sort le plus grand)
-        if local_rand > remote_rand:
-            self.premier_joueur = True
-            if self.remote_pseudo==args.pseudo:
-                args.pseudo += '1'
-                self.remote_pseudo += '2'
-            print('Je joue en premier')
-        else:
-            self.premier_joueur = False
-            if self.remote_pseudo==args.pseudo:
-                args.pseudo += '2'
-                self.remote_pseudo += '1'
-            print('Je joue en second')
-        print("Connecté avec", self.remote_pseudo, self.sock.getpeername())
+    def demarrer_ecoute(self, jeu, plateau):
+        # Lancer thread d'écoute
+        self.reception = Reception(self.sock, jeu, plateau)
+        self.reception.start()
 
     def envoyer(self, param, valeur):
         message = param + '=' + valeur
@@ -90,9 +44,8 @@ class Reseau():
         message = self.sock.recv(nbBytes).decode('ascii').split('=')
         return message
 
-    def ecouter_reception(self, jeu, plateau):
-        self.reception = Reception(self.sock, jeu, plateau)
-        self.reception.start()
+    def reception_multiple(self):
+        return self.sock.recv(1024).decode('ascii').split('&')
 
 class Reception(Thread):
     def __init__(self, socket, jeu, plateau):
@@ -101,7 +54,7 @@ class Reception(Thread):
         self.continuer = True
         self.jeu = jeu
         self.plateau = plateau
-        self.socket.settimeout(2) # 2s
+        self.socket.settimeout(5) # 5s
 
     def run(self):
         while self.continuer:

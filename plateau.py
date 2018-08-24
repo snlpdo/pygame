@@ -345,9 +345,9 @@ class Plateau():
     
     def handle_mouse_click(self, mouse_event, jeu, reseau):
         if mouse_event.type == pygame.MOUSEBUTTONDOWN: 
-            return self.__check_start_move(mouse_event, jeu, reseau) # Début ?
+            return self.__check_start_move(mouse_event, jeu) # Début ?
         elif mouse_event.type == pygame.MOUSEMOTION: 
-            return self.__continue_move(mouse_event, jeu, reseau)
+            return self.__continue_move(mouse_event, jeu)
         elif mouse_event.type == pygame.MOUSEBUTTONUP: 
             return self.__end_move(mouse_event, jeu, reseau)
 
@@ -367,7 +367,7 @@ class Plateau():
                     return (True, t)
         return (False, None)
 
-    def __check_start_move(self, mouse_event, jeu, reseau):
+    def __check_start_move(self, mouse_event, jeu):
         pos = mouse_event.pos
 
         case_occupee, piece = self.__check_cell(pos, jeu)
@@ -382,7 +382,7 @@ class Plateau():
             self.check_click_on_button(mouse_event)
         return self.piece_a_deplacer
 
-    def __continue_move(self, mouse_event, jeu, reseau):
+    def __continue_move(self, mouse_event, jeu):
         if self.piece_a_deplacer!=None:
             pos = mouse_event.pos
             newpos = [pos[0], pos[1]]
@@ -406,7 +406,6 @@ class Plateau():
                 result = jeu.deplacer_piece(jeu.joueur_local, dst, self.piece_a_deplacer)
                 if result and reseau!=None:
                     reseau.envoyer('move', src + ',' + dst)
-
             self.piece_a_deplacer = None
         else:
             self.check_click_on_button(mouse_event)
