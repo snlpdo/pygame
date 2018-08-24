@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 
 # À faire:
+#  - Fusion de la branche reseau avec master
+#  - Enregistrement/chargement d'une partie réseau depuis un fichier
 #  - Gestion de la lettre cachée du joker
 #  - Vérifier les mots dans un dictionnaire
-#  - Émettre un son lorsque c'est au tour du joueur suivant
+#  - Émettre un message sonore lorsque c'est au tour du joueur suivant
 #  - réseau: 
-#      * démarrer le serveur sur toutes les adresses IPv4
+#      * démarrage du serveur sur toutes les adresses IPv4
 #      * détection automatique du serveur
 #
 # Bugs connus:
@@ -133,9 +135,9 @@ def main():
             plateau.afficher_bouton(points, 
                 jeu.joueur_local==jeu.joueur_actuel)
 
-            ######################
-            # Clic sur le bouton #
-            ######################
+            ########################
+            # Validation d'un coup #
+            ########################
             if plateau.button.is_clicked():
                 result = jeu.valider(jeu.joueur_local)
                 if not(result[0]): # Coup non valide
