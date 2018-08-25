@@ -40,6 +40,7 @@ class Jeu():
         self.joueur_actuel = 1 
         self.partie_finie = False
         self.tour_jeu = 1
+        self.jokers = []
 
         # Charger un fichier ?
         if args.input!=None: 
@@ -103,6 +104,14 @@ class Jeu():
         if reseau==None:
             self.joueur_local = self.joueur_actuel
 
+        # Représentation des jokers
+        ligne = input.readline()
+        jok = []
+        if len(ligne)>=2: # 1 joker a été utilisé
+            jok.insert(0,ligne[1])
+        if len(ligne)>=3: # les 2 jokers ont été utilisés
+            jok.insert(0,ligne[2])
+
         # Contenu de la grille: créer les lettres correspondantes,
         # les enlever de la pioche et les affecter arbitrairement
         # au premier joueur (pour validation plateau)
@@ -112,9 +121,14 @@ class Jeu():
                 if ligne[j] == ' ': # cellule vide
                     self.grille[i][j] = ''
                 else: # cellule occupée
-                    lettre = self.creer_lettre(ligne[j])
-                    # Placer la lettre sur le jeu
-                    self.grille[i][j] = lettre.char 
+                    if ligne[j]=='?':
+                        lettre = self.creer_lettre(' ')
+                        lettre.joker_char = jok.pop()
+                        self.jokers.append(lettre)
+                        self.grille[i][j] = '?' 
+                    else:
+                        lettre = self.creer_lettre(ligne[j])
+                        self.grille[i][j] = lettre.char 
                     lettre.pos = self.get_cell_name(j, i)
                     # L'attribuer arbitrairement au 1er joueur
                     self.joueurs[0].provisoire.append(lettre)
@@ -157,6 +171,19 @@ class Jeu():
 
         # Joueur local
         out.write(str(self.joueur_local) + '\n')
+
+        # Jokers
+        ligne = '?'
+        if len(self.jokers)==1:
+            ligne += self.jokers[0].joker_char
+        if len(self.jokers)==2:
+            zone, c0, busy = self.get_cell_info(1, self.jokers[0].pos)
+            zone, c1, busy = self.get_cell_info(1, self.jokers[1].pos)
+            if c0[1]<c1[1] or c0[1]==c1[1] and c0[0]<c1[0]: # jok0 avant jok1
+                ligne += self.jokers[0].joker_char + self.jokers[1].joker_char
+            else:
+                ligne += self.jokers[1].joker_char + self.jokers[0].joker_char
+        out.write(ligne + '\n')
 
         # Grille (en enlevant les pièces provisoires)
         copy_grille = [[x for x in ligne] for ligne in self.grille]
@@ -319,8 +346,12 @@ class Jeu():
             for j in range(len(self.grille[i])):
                 if self.grille[i][j]=="":
                     s += ' |'
-                elif self.grille[i][j]==' ':
-                    s += '?|'
+                elif self.grille[i][j]=='?':
+                    # Remplacer le joker par la lettre qu'il représente
+                    cell_name = self.get_cell_name(j, i)
+                    for l in self.jokers:
+                        if l.pos == cell_name:
+                            s += l.joker_char + '|'
                 else:
                     s += self.grille[i][j] + '|'
             s += '\n ' + '-'*31 + '\n'
@@ -536,8 +567,10 @@ class Jeu():
         return (total, ','.join(mots))
 
     def valider(self, jnum):
+        """ Valider le coup d'un joueur """
+
         score, info = self.verifier()
-        if '?' in info:
+        if ' ' in info:
             return (False, 'Il faut attribuer une lettre au joker avec un clic droit sur la pièce')
 
         if score==0: # Coup invalide
@@ -571,6 +604,7 @@ class Jeu():
 
                 points_lettre = (Lettre.alphabet[c])[1]
 
+                # Identifier si la lettre est en placement provisoire
                 cell_name = self.get_cell_name(x, ymin)
                 lettre_provisoire = None
                 for l in joueur.provisoire:
@@ -582,13 +616,15 @@ class Jeu():
                 if lettre_provisoire!=None: # prendre en compte le bonus
                     bonus_lettre, bm = self.get_bonus(x, ymin)
                     bonus_mot *= bm
-                    if lettre_provisoire.char==' ':
+                    if lettre_provisoire.char==' ': # Joker
                         points_lettre = 0
                         if lettre_provisoire.joker_char!=None:
+                            if lettre_provisoire not in(self.jokers):
+                                self.jokers.append(lettre_provisoire)
                             c = lettre_provisoire.joker_char
-                            self.grille[ymin][x] = c
+                            self.grille[ymin][x] = '?'
                         else: 
-                            c = '?'
+                            c = ' '
 
                 points += points_lettre * bonus_lettre
                 mot.append(c)
@@ -608,8 +644,12 @@ class Jeu():
                 c = self.grille[y][xmin] 
                 if c=='': return (0,"Mot avec un espace")
 
-                points_lettre = (Lettre.alphabet[c])[1]
+                if c=='?':
+                    points_lettre = 0
+                else:
+                    points_lettre = (Lettre.alphabet[c])[1]
 
+                # Identifier si la lettre est en placement provisoire
                 cell_name = self.get_cell_name(xmin, y)
                 lettre_provisoire = None
                 for l in joueur.provisoire:
@@ -621,13 +661,15 @@ class Jeu():
                 if lettre_provisoire!=None: # prendre en compte le bonus
                     bonus_lettre, bm = self.get_bonus(xmin, y)
                     bonus_mot *= bm
-                    if lettre_provisoire.char==' ':
+                    if lettre_provisoire.char==' ': # Joker
                         points_lettre = 0
                         if lettre_provisoire.joker_char!=None:
+                            if lettre_provisoire not in(self.jokers):
+                                self.jokers.append(lettre_provisoire)
                             c = lettre_provisoire.joker_char
-                            self.grille[y][xmin]  = c
+                            self.grille[y][xmin]  = '?'
                         else: 
-                            c = '?'
+                            c = ' '
 
                 points += points_lettre * bonus_lettre
                 mot.append(c)

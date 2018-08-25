@@ -8,7 +8,6 @@
 #      * détection automatique du serveur
 #
 # Bugs connus:
-#  - L'écran de fin n'est pas transmis par le réseau
 #  - Horodatage du fichier de sauvegarde (heure UTC au lieu de locale)
 
 import sys
@@ -152,6 +151,7 @@ def main():
                     tirage = jeu.completer_chevalet(jeu.joueur_actuel)
                     if reseau!=None:
                         if tirage=="##FIN##":
+                            print("fin de partie")
                             reseau.envoyer_multiple(['message', 'validation', 'tirage', 'fin'], 
                                 [result[1], '', ''.join(tirage), ''])
                             reseau.reception.stop()

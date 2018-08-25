@@ -229,7 +229,8 @@ class Reception(Thread):
                     result = self.jeu.valider(joueur_num)
                     self.plateau.memoriser(self.jeu.joueurs[joueur_num-1])
                 elif message[0]=='tirage':
-                    self.jeu.affecter_tirage(self.jeu.joueur_actuel, message[1], True)
+                    if message[1][0]!="#":
+                        self.jeu.affecter_tirage(self.jeu.joueur_actuel, message[1], True)
                 elif message[0]=='message':
                     self.plateau.set_message(message[1], 'info')
                 elif message[0]=='joker':
