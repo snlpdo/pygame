@@ -583,6 +583,7 @@ class Jeu():
                     bonus_lettre, bm = self.get_bonus(x, ymin)
                     bonus_mot *= bm
                     if lettre_provisoire.char==' ':
+                        points_lettre = 0
                         if lettre_provisoire.joker_char!=None:
                             c = lettre_provisoire.joker_char
                             self.grille[ymin][x] = c
@@ -621,9 +622,10 @@ class Jeu():
                     bonus_lettre, bm = self.get_bonus(xmin, y)
                     bonus_mot *= bm
                     if lettre_provisoire.char==' ':
+                        points_lettre = 0
                         if lettre_provisoire.joker_char!=None:
                             c = lettre_provisoire.joker_char
-                            self.grille[ymin][x] = c
+                            self.grille[y][xmin]  = c
                         else: 
                             c = '?'
 
