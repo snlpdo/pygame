@@ -5,6 +5,7 @@ import pygame
 from joueur import *
 from lettre import *
 from reseau import Reseau
+from dictionnaire import *
 
 LIGNES = "ABCDEFGHIJKLMNO"
 
@@ -41,6 +42,7 @@ class Jeu():
         self.partie_finie = False
         self.tour_jeu = 1
         self.jokers = []
+        self.dico = Dictionnaire()
 
         # Charger un fichier ?
         if args.input!=None: 
@@ -510,24 +512,30 @@ class Jeu():
             else:
                 return (None, xmin,xmax,ymin,ymax) # invalide (lettre isolée)
 
-    def verifier(self):
+    def verifier_positionnement(self):
+        """ Vérifier si le positionnement des lettres est correcte et comptabilise
+        les points du coup."""
+
         joueur = self.joueurs[self.joueur_actuel-1]
 
-        if len(joueur.provisoire)==0: return (0, 'Aucune lettre') # aucune lettre
+        # aucune lettre n'a été posée sur le plateau
+        if len(joueur.provisoire)==0: return (0, ['Aucune lettre'], None) 
 
         # Direction principale
         mot_principal_horizontal,xmin,xmax,ymin,ymax = self.__dir_principale_horizontale(self.joueur_actuel)
-        if mot_principal_horizontal == None:
-            return (0, 'Coup invalide')
+        if mot_principal_horizontal == None: # pas de direction principale identifiable
+            return (0, ['Coup invalide'], None)
 
         # Comptabiliser les points
         total = 0
         mots = []
+        points = []
         if mot_principal_horizontal:
             # Vérifier le mot principal horizontal
             res = self.identifier_mot(True,xmin,xmax,ymin,ymax,joueur)
-            if res[0]==0: return (0, res[1])
+            if res[0]==0: return (0, [res[1]], None)
             total += res[0]
+            points = [res[0]]
             mots = [res[1]]
 
             # Vérifier l'existance de mots secondaires 
@@ -535,50 +543,64 @@ class Jeu():
                 zone, c, busy = self.get_cell_info(self.joueur_actuel, l.pos)
                 res = self.identifier_mot(False,c[0],c[0],c[1],c[1],joueur)
                 total += res[0]
-                if res[0] != 0: mots.append(res[1])
+                if res[0] != 0: 
+                    mots.append(res[1])
+                    points.append(res[0])
 
         else: # Vérifier le mot principal vertical
             res = self.identifier_mot(False,xmin,xmax,ymin,ymax,joueur)
-            if res[0]==0: return (0, res[1])
+            if res[0]==0: return (0, [res[1]], None)
             total += res[0]
             mots = [res[1]]
+            points = [res[0]]
 
             # Vérifier l'existance de mots secondaires 
             for l in joueur.provisoire:
                 zone, c, busy = self.get_cell_info(self.joueur_actuel, l.pos)
                 res = self.identifier_mot(True,c[0],c[0],c[1],c[1],joueur)
                 total += res[0]
-                if res[0] != 0: mots.append(res[1])
+                if res[0] != 0: 
+                    mots.append(res[1])
+                    points.append(res[0])
 
         if self.tour_jeu == 1: # Le premier mot doit recouvrir la case H8
             positionOK = False
             for p in joueur.provisoire:
                 if p.pos == "H8": positionOK = True
             if not(positionOK):
-                return (0, "Le premier mot doit recouvrir la case H8")
-        else: # Le mot ne doit pas être isolé
+                return (0, ["Le premier mot doit recouvrir la case H8"], None)
+        else: # Les autres mots ne doivent pas être isolés
             if len(mots)==1 and len(mots[0])==len(joueur.provisoire):
-              return (0, "Le mot ne peut être isolé du reste du jeu")
+              return (0, ["Le mot ne peut être isolé du reste du jeu"], None)
 
         # Détection d'un scrabble
         scrabble = len(joueur.provisoire)==7
         if scrabble: total += 50
 
-        return (total, ','.join(mots))
+        return (total, mots, points)
 
     def valider(self, jnum):
         """ Valider le coup d'un joueur """
 
-        score, info = self.verifier()
-        if ' ' in info:
-            return (False, 'Il faut attribuer une lettre au joker avec un clic droit sur la pièce')
-
+        score, mots, points = self.verifier_positionnement()
         if score==0: # Coup invalide
-            return (False, info) 
+            return (False, mots[0]) 
         else: # OK
+            if ' ' in ''.join(mots):
+                return (False, 'Il faut attribuer une lettre au joker avec un clic droit sur la pièce')
+
             joueur = self.joueurs[jnum-1]
             joueur.score += score
-            return (True, 'mot(s): ' + info)
+            if len(mots)==1:
+                msg = 'mot: '
+            else:
+                msg = 'mots: '
+            # Vérifier les mots
+            for i, m in enumerate(mots):
+                if not(self.dico.valide(m.lower())):
+                    return (False, 'Mot '+m+' non valide.')
+                msg += m + '(' + str(points[i]) + ') '
+            return (True, msg)
 
     def identifier_mot(self, horizontal, xmin, xmax, ymin, ymax, joueur):
         """ Identifier un mot selon une direction et un rectangle donnés. """

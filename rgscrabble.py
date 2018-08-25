@@ -133,19 +133,25 @@ def main():
         plateau.draw(jeu)
         
         if not(jeu.partie_finie):
-            # Bouton de validation
-            points, info = jeu.verifier()
-            plateau.afficher_bouton(points, 
+            # Comptabiliser le score actuel du coup en cours
+            total_points, mots, points = jeu.verifier_positionnement()
+
+            # Bouton de validation (affichant les points)
+            plateau.afficher_bouton(total_points, 
                 jeu.joueur_local==jeu.joueur_actuel)
 
-            ########################
-            # Validation d'un coup #
-            ########################
+            ###################
+            # Valider un coup #
+            ###################
             if plateau.button.is_clicked():
+                # Vérifier si le coup est valide
                 result = jeu.valider(jeu.joueur_local)
+
                 if not(result[0]): # Coup non valide
                     plateau.set_message(result[1])
-                elif result[1]!="": # Coup valide
+
+                else: # Coup valide
+                    print(result[1])
                     plateau.set_message(result[1], 'info')
                     plateau.memoriser(jeu.joueurs[jeu.joueur_actuel-1])
                     tirage = jeu.completer_chevalet(jeu.joueur_actuel)
