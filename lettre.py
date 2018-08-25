@@ -1,5 +1,9 @@
 import pygame
 
+NOIR = (0,0,0)
+ROUGE = (255, 0, 0)
+BLANC = (255, 255, 255)
+
 class Lettre():
     alphabet = {
         "A": (9, 1),
@@ -49,6 +53,7 @@ class Lettre():
         self.char = c
         self.img = None
         self.pos = None
+        self.joker_char = None
 
     def __str__(self):
         """ Description du contenu de la Lettre """
@@ -64,17 +69,21 @@ class Lettre():
         INPUT:
         size: dimension de l'image (celle d'une cellule)
         """
+
         w, h = size[0], size[1]
         self.img = pygame.Surface((w,h))
 
-        pygame.draw.rect(self.img, (255, 255, 255), (2, 2, w-4, h-4))
+        pygame.draw.rect(self.img, BLANC, (2, 2, w-4, h-4))
         policeG = pygame.font.SysFont('comicsans', 30)
         policeP = pygame.font.SysFont('comicsans', 14)
     
-        text = policeG.render(self.char, True, (0,0,0))
+        if self.joker_char!=None:
+            text = policeG.render(self.joker_char, True, ROUGE)
+        else:
+            text = policeG.render(self.char, True, NOIR)
         self.img.blit(text, (w/2-text.get_width()/2, h/2-text.get_height()/2))
         val = Lettre.alphabet[self.char]
         if val[1]!=0:
-            text2 = policeP.render(str(val[1]), True, (0,0,0))
+            text2 = policeP.render(str(val[1]), True, NOIR)
             self.img.blit(text2, (6.8*w/8-text.get_width()/2,
                                 7*h/8-text.get_height()/2))

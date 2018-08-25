@@ -51,130 +51,10 @@ class Jeu():
 
         # Partie réseau ?
         if reseau!=None:
-            for i in range(4):
-                # Envoi pseudo
-                if i==0 and args.serveur or i==1 and not(args.serveur): 
-                    reseau.envoyer('pseudo', args.pseudo)
-
-                # Réception pseudo
-                elif i==1 and args.serveur or i==0 and not(args.serveur): 
-                    param, remote_pseudo = reseau.recevoir(128)
-                    if param!='pseudo':
-                        print('Reçu paramètre ' + param + ' au lieu de pseudo')
-                        quit()
-
-                # Envoi nombre aléatoire
-                elif i==2 and args.serveur or i==3 and not(args.serveur): 
-                    if args.serveur and args.input: # Pour le serveur
-                        if self.joueur_actuel==self.joueur_local:
-                            local_rand = 1.5 # prise de la main par le serveur
-                        else:
-                            local_rand = -0.5 # prise de la main par l'adversaire
-                    else: # Pour le client
-                        local_rand = random.random() # prise de la main aléatoire
-                    reseau.envoyer('priority', str(local_rand))
-
-                # Réception nombre aléatoire
-                elif i==3 and args.serveur or i==2 and not(args.serveur): 
-                    param, remote_rand = reseau.recevoir(128)
-                    if param != 'priority' : 
-                        print('Reçu paramètre '+param+' au lieu de priority')
-                        quit()
-                    remote_rand = float(remote_rand)
-
-            if args.serveur: 
-                # Envoi de:
-                # - la grille, 
-                # - le numéro de joueur de l'adversaire
-                # - des chevalets des 2 joueurs (dans l'ordre)
-                # - des scores des 2 joueurs (dans l'ordre)
-                # - du numéro de tour de jeu
-                msg = []
-                for i in range(15):
-                    for j in range(15):
-                        if self.grille[i][j]=='':
-                            msg.append(' ')
-                        elif self.grille[i][j]==' ':
-                            msg.append('?')
-                        else:
-                            msg.append(self.grille[i][j])
-                num_adversaire = (self.joueur_local%2)+1
-                ch1 = [ l.char for l in self.joueurs[0].chevalet[0] if l!=None ]
-                ch2 = [ l.char for l in self.joueurs[1].chevalet[0] if l!=None ]
-
-                reseau.envoyer_multiple(['grille', 'numero', 'ch1', 'ch2', 
-                    'sc1', 'sc2', 'tour'], 
-                    [''.join(msg), str(num_adversaire),''.join(ch1),''.join(ch2), 
-                     str(self.joueurs[0].score), str(self.joueurs[1].score), 
-                     str(self.tour_jeu)])
-
-                reseau.recevoir(64) # attendre l'ack du client
-
-            else: # client
-                # Réception de la grille et du numéro de joueur à utiliser
-                messages = reseau.reception_multiple()
-
-                for message in messages:
-                    message = message.split('=')
-
-                    if message[0]=='grille':
-                        rgrille = message[1]
-                        for idx in range(15*15):
-                            j = idx%15
-                            i = idx//15
-                            if rgrille[idx]=='?':
-                                self.grille[i][j] = ' '
-                            elif rgrille[idx]==' ':
-                                self.grille[i][j] = ''
-                            else:
-                                self.grille[i][j] = rgrille[idx]
-
-                            if self.grille[i][j] != '': # affecter au 1er joueur
-                                lettre = self.creer_lettre(self.grille[i][j])
-                                lettre.pos = self.get_cell_name(j, i)
-                                # L'attribuer arbitrairement au 1er joueur
-                                self.joueurs[0].provisoire.append(lettre)
-
-                    elif message[0]=='numero': # ĺe numéro du joueur local
-                        self.joueur_local = int(message[1])
-                        num_adversaire = (self.joueur_local%2)+1
-
-                    elif message[0][:2]=='ch': # Un chevalet
-                        num = int(message[0][2:])
-                        for i, l in enumerate(message[1]):
-                            lettre = self.creer_lettre(l)
-                            lettre.pos = 'Q' + str(4+i)
-                            self.joueurs[num-1].chevalet[0][i] = lettre
-
-                    elif message[0][:2]=='sc': # Un score
-                        num = int(message[0][2:])
-                        self.joueurs[num-1].score = int(message[1])
-
-                    elif message[0]=='tour':
-                        self.tour_jeu = int(message[1])
-
-                reseau.envoyer('PRET', '')
-
-            # Modification des pseudos
-            self.joueurs[self.joueur_local-1].pseudo = args.pseudo
-            self.joueurs[num_adversaire-1].pseudo = remote_pseudo
-
-            # Détermination du 1er joueur (tirage au sort le plus grand)
-            if local_rand > remote_rand:
-                self.joueur_actuel = self.joueur_local
-                print('Je joue en premier')
-            else:
-                self.joueur_actuel = (self.joueur_local%2)+1
-                print('Je joue en second')
-
-            if self.joueurs[self.joueur_local-1].pseudo==self.joueurs[num_adversaire-1].pseudo:
-                self.joueurs[0].pseudo += '1'
-                self.joueurs[1].pseudo += '2'
+            reseau.init_communication(args, self)
 
     def debuter_partie(self, reseau, plateau):
         if reseau != None: 
-            reseau.demarrer_ecoute(self, plateau)
-
             # En mode réseau, il ne faut tirer au sort que les lettres du joueur local
             # et les envoyer à l'adversaire
             for i in range(2): # Action en 2 temps
@@ -191,6 +71,8 @@ class Jeu():
                         print("Reçu paramètre "+param+" au lieu de tirage")
                         quit()
                     self.affecter_tirage(i+1, tirage, False)
+
+            reseau.demarrer_ecoute(self, plateau)
         else: # Completer le chevalet de tous les joueurs
             for i in range(len(self.joueurs)):
                 self.completer_chevalet(i+1, False)
@@ -256,8 +138,8 @@ class Jeu():
         input.close()
 
     def sauvegarder(self):
-        """ Sauvegarder la partie courant dans un fichier avec dénomé en 
-        fonction de l'horodate du moment."""
+        """ Sauvegarder la partie dans un fichier nommé d'après 
+        l'horodate du moment. """
 
         # Nom du fichier
         filename = time.strftime("%Y%m%d-%H%M.sav", time.gmtime())
@@ -276,15 +158,23 @@ class Jeu():
         # Joueur local
         out.write(str(self.joueur_local) + '\n')
 
-        # Grille
+        # Grille (en enlevant les pièces provisoires)
+        copy_grille = [[x for x in ligne] for ligne in self.grille]
+
+        # Enlever les pièce provisoires
+        for idx, j in enumerate(self.joueurs):
+            for lettre in j.provisoire:
+                zone, c, busy = self.get_cell_info(idx, lettre.pos)
+                copy_grille[c[1]][c[0]] = ''
+
         for i in range(15):
             for j in range(15):
-                if self.grille[i][j] == '':
+                if copy_grille[i][j] == '':
                     out.write(' ')
-                elif self.grille[i][j]== ' ':
+                elif copy_grille[i][j]== ' ':
                     out.write('?')
                 else:   
-                    out.write(str(self.grille[i][j]))
+                    out.write(str(copy_grille[i][j]))
             out.write('\n')
 
         # Chaque joueur: score puis chevalet + lettres placées
@@ -647,6 +537,8 @@ class Jeu():
 
     def valider(self, jnum):
         score, info = self.verifier()
+        if '?' in info:
+            return (False, 'Il faut attribuer une lettre au joker avec un clic droit sur la pièce')
 
         if score==0: # Coup invalide
             return (False, info) 
@@ -677,22 +569,28 @@ class Jeu():
                 c = self.grille[ymin][x] 
                 if c=='': return (0,"Mot avec un espace")
 
-                mot.append(c)
-
                 points_lettre = (Lettre.alphabet[c])[1]
 
                 cell_name = self.get_cell_name(x, ymin)
-                lettre_provisoire = False
+                lettre_provisoire = None
                 for l in joueur.provisoire:
                     if l.pos == cell_name:
-                        lettre_provisoire = True
+                        lettre_provisoire = l
                         break
 
                 bonus_lettre = 1
-                if lettre_provisoire: # prendre en compte le bonus
+                if lettre_provisoire!=None: # prendre en compte le bonus
                     bonus_lettre, bm = self.get_bonus(x, ymin)
                     bonus_mot *= bm
+                    if lettre_provisoire.char==' ':
+                        if lettre_provisoire.joker_char!=None:
+                            c = lettre_provisoire.joker_char
+                            self.grille[ymin][x] = c
+                        else: 
+                            c = '?'
+
                 points += points_lettre * bonus_lettre
+                mot.append(c)
         else: # Mot vertical
             # Étendre en haut
             while ymin>=0 and self.grille[ymin][xmin]!='': ymin-=1
@@ -709,22 +607,28 @@ class Jeu():
                 c = self.grille[y][xmin] 
                 if c=='': return (0,"Mot avec un espace")
 
-                mot.append(c)
-
                 points_lettre = (Lettre.alphabet[c])[1]
 
                 cell_name = self.get_cell_name(xmin, y)
-                lettre_provisoire = False
+                lettre_provisoire = None
                 for l in joueur.provisoire:
                     if l.pos == cell_name:
-                        lettre_provisoire = True
+                        lettre_provisoire = l
                         break
 
                 bonus_lettre = 1
-                if lettre_provisoire: # prendre en compte le bonus
+                if lettre_provisoire!=None: # prendre en compte le bonus
                     bonus_lettre, bm = self.get_bonus(xmin, y)
                     bonus_mot *= bm
+                    if lettre_provisoire.char==' ':
+                        if lettre_provisoire.joker_char!=None:
+                            c = lettre_provisoire.joker_char
+                            self.grille[ymin][x] = c
+                        else: 
+                            c = '?'
+
                 points += points_lettre * bonus_lettre
+                mot.append(c)
 
         points *= bonus_mot
         return (points,  ''.join(mot))

@@ -38,7 +38,11 @@ class Plateau():
         self.tx0, self.ty0 = 0, 0 # origine du chevalet
         self.size = self.screen.get_size()
         self.img = self.__creer_image(bonus)
-        self.piece_a_deplacer = None
+
+        self.piece_selectionnee = None
+        self.piece_selectionnee_pos = None
+        self.piece_selectionnee_delta = None
+        self.edition_joker = None
 
         # Message temporaire
         self.message = ""
@@ -228,7 +232,7 @@ class Plateau():
         text = font.render(joueur.pseudo, True, NOIR)
         self.screen.blit(text, (LEFT_MARGIN+3*self.wCell,TOP_MARGIN+16*self.hCell-20))
         for l in joueur.chevalet[0]:
-            if l != None and l != self.piece_a_deplacer:
+            if l != None and l != self.piece_selectionnee:
                 if l.img == None:
                     l.creer_image((self.wCell, self.hCell))
                 x, y = self.get_cell_orig(l.pos)
@@ -244,11 +248,13 @@ class Plateau():
         joueur = jeu.joueurs[jeu.joueur_actuel-1]
 
         for l in joueur.provisoire:
-            if l != self.piece_a_deplacer:
+            if l != self.piece_selectionnee:
+                # Image de la lettre
                 if l.img == None:
                     l.creer_image((self.wCell, self.hCell))
                 x, y = self.get_cell_orig(l.pos)
                 self.screen.blit(l.img, (x, y))
+                # Carré dans le coin supérieur gauche
                 if jeu.joueur_local == jeu.joueur_actuel:
                     couleur = BLEU
                 else:
@@ -297,10 +303,10 @@ class Plateau():
             self.screen.blit(text, (40, TOP_MARGIN + 15*self.hCell +25 + textT.get_height()+5 + i*20))
 
     def __afficher_deplacement(self):
-        if self.piece_a_deplacer!=None:
-            pos = (self.piece_a_deplacer_pos[0]-self.piece_a_deplacer_delta[0],
-                self.piece_a_deplacer_pos[1]-self.piece_a_deplacer_delta[1])
-            self.screen.blit(self.piece_a_deplacer.img, pos)
+        if self.piece_selectionnee!=None:
+            pos = (self.piece_selectionnee_pos[0]-self.piece_selectionnee_delta[0],
+                self.piece_selectionnee_pos[1]-self.piece_selectionnee_delta[1])
+            self.screen.blit(self.piece_selectionnee.img, pos)
 
     def afficher_bouton(self, nb_points, visible):
         if visible:
@@ -343,13 +349,43 @@ class Plateau():
                 return LIGNES[ligne] + str(colonne+1)
         return None
     
-    def handle_mouse_click(self, mouse_event, jeu, reseau):
-        if mouse_event.type == pygame.MOUSEBUTTONDOWN: 
-            return self.__check_start_move(mouse_event, jeu) # Début ?
-        elif mouse_event.type == pygame.MOUSEMOTION: 
-            return self.__continue_move(mouse_event, jeu)
-        elif mouse_event.type == pygame.MOUSEBUTTONUP: 
-            return self.__end_move(mouse_event, jeu, reseau)
+    def handle_mouse_click(self, mouse_event, jeu):
+        """ Gestion des clics de souris sur le plateau (lettre ou bouton). """
+
+        if mouse_event.type == pygame.MOUSEBUTTONDOWN and mouse_event.button==1: # clic droit
+            result = self.__check_start_move(mouse_event, jeu) # Début ? 
+            if result == None:
+                self.check_click_on_button(mouse_event)
+            self.edition_joker = None
+        elif mouse_event.type == pygame.MOUSEMOTION:
+            self.__continue_move(mouse_event, jeu)
+        elif mouse_event.type == pygame.MOUSEBUTTONUP:
+            self.edition_joker = None
+            if mouse_event.button==1: # clic droit
+                result = self.__end_move(mouse_event, jeu)
+                if result == None:
+                    self.check_click_on_button(mouse_event)
+                return result
+            elif mouse_event.button==3: # clic gauche 
+                case_occupee, piece = self.__check_cell(mouse_event.pos, jeu)
+                if case_occupee and piece.char==' ':
+                    self.set_message("Édition du Joker: taper la lettre à simuler", 
+                        mtype='info', nb_sec=60)
+                    self.edition_joker = piece
+
+    def editer_joker(self, key):
+        """ Modifier l'image de la lettre joker """
+
+        char = pygame.key.name(key)
+        if char.isalpha():
+            self.edition_joker.joker_char = char.upper()
+            self.edition_joker.creer_image((self.wCell, self.hCell))
+            self.set_message('', nb_sec=0) # effacer le message
+
+            result = (True, self.edition_joker.joker_char+self.edition_joker.pos)
+            self.edition_joker = None
+            return result
+        return (False, None)
 
     def __check_cell(self, pos, jeu):
         """ Indique si la position indiquée correspond à une case contenant pièce
@@ -368,51 +404,61 @@ class Plateau():
         return (False, None)
 
     def __check_start_move(self, mouse_event, jeu):
+        """ Vérifier si l'évènement souris correspondant à un début de 
+        déplacement d'une lettre. Retourne et mémorise la lettre concernée ou None sinon. """
+
         pos = mouse_event.pos
 
         case_occupee, piece = self.__check_cell(pos, jeu)
 
         if case_occupee: # Début de déplacement
-            self.piece_a_deplacer = piece
-            self.piece_a_deplacer_pos = pos
-            self.piece_a_deplacer_delta = ((pos[0]-LEFT_MARGIN)%self.wCell, 
+            self.piece_selectionnee = piece
+            self.piece_selectionnee_pos = pos
+            self.piece_selectionnee_delta = ((pos[0]-LEFT_MARGIN)%self.wCell, 
                 (pos[1]-LEFT_MARGIN)%self.hCell)
         else:
-            self.piece_a_deplacer = None
-            self.check_click_on_button(mouse_event)
-        return self.piece_a_deplacer
+            self.piece_selectionnee = None
+        return self.piece_selectionnee
 
     def __continue_move(self, mouse_event, jeu):
-        if self.piece_a_deplacer!=None:
+        """ Suivre la position de la souris sans sortir de l'écran
+        lorsqu'une lettre est déplacée. """
+
+        if self.piece_selectionnee!=None:
+
             pos = mouse_event.pos
             newpos = [pos[0], pos[1]]
-            if pos[0] < 0:
+            if pos[0] < 0: # Bord gauche de l'écran
                 newpos[0] = 0
-            elif pos[0] >= self.size[0]-self.wCell:
+            elif pos[0] >= self.size[0]-self.wCell: # Bord droit de l'écran
                 newpos[0] = self.size[0]-self.wCell-1
-            if pos[1] < 0:
+            if pos[1] < 0: # Bord supérieur de l'écran
                 newpos[1] = 0
-            elif pos[1] >= self.size[1]-self.hCell:
+            elif pos[1] >= self.size[1]-self.hCell: # Bord inférieur
                 newpos[1] = self.size[1]-self.hCell-1
-            self.piece_a_deplacer_pos = tuple(newpos)
-        return self.piece_a_deplacer
 
-    def __end_move(self, mouse_event, jeu, reseau):
-        if self.piece_a_deplacer!=None:
-            src = self.piece_a_deplacer.pos
+            self.piece_selectionnee_pos = tuple(newpos)
+
+        return self.piece_selectionnee
+
+    def __end_move(self, mouse_event, jeu):
+        """ Identifier la cellule où a été relâchée la souris, demander
+        au jeu de valider le déplacement (ou non) pour envoyer l'information
+        sur le réseau. """
+
+        if self.piece_selectionnee!=None:
             dst = self.get_cell_name(mouse_event.pos)
 
             if dst!=None:
-                result = jeu.deplacer_piece(jeu.joueur_local, dst, self.piece_a_deplacer)
-                if result and reseau!=None:
-                    reseau.envoyer('move', src + ',' + dst)
-            self.piece_a_deplacer = None
-        else:
-            self.check_click_on_button(mouse_event)
+                result = (self.piece_selectionnee, dst)
+            else:
+                result = None
+            self.piece_selectionnee = None
 
-        return self.piece_a_deplacer    
+            return result    
 
     def check_click_on_button(self, mouse_event):
+        """ Vérifie si le clic de souris s'effectue sur le bouton """
         self.button.check_mouse_click(mouse_event)
 
     def set_message(self, m, mtype='error', fps=30, nb_sec=3):

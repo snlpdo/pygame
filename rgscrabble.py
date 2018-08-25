@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 # À faire:
-#  - Gestion de la lettre cachée du joker
 #  - Vérifier les mots dans un dictionnaire
 #  - Émettre un message sonore lorsque c'est au tour du joueur suivant
 #  - réseau: 
@@ -94,7 +93,6 @@ def main():
     # Boucle principale #
     #####################
     continuer = True
-    piece_deplacee = None
     clock = pygame.time.Clock()
     while continuer:
         # Gestion des évènements
@@ -103,18 +101,33 @@ def main():
                 continuer = False
                 if reseau!=None: reseau.reception.stop()
             elif event.type == pygame.KEYUP:
-                if event.key == pygame.K_v: # Capture console
-                    print(jeu)
-                elif event.key == pygame.K_s: # Sauvegarde fichier
-                    if not(args.client):
-                        filename = jeu.sauvegarder()
-                        plateau.set_message('Sauvegarde dans '+filename, 'info')
-                elif jeu.partie_finie:
-                    continuer = False
+                if plateau.edition_joker==None:
+                    if event.key == pygame.K_v: # Capture console
+                        print(jeu)
+                    elif event.key == pygame.K_s: # Sauvegarde fichier
+                        if not(args.client):
+                            filename = jeu.sauvegarder()
+                            plateau.set_message('Sauvegarde dans '+filename, 'info')
+                    elif jeu.partie_finie:
+                        continuer = False
+                else: # Édition joker
+                    res = plateau.editer_joker(event.key)
+                    if res[0] and reseau != None:
+                        reseau.envoyer('joker', str(jeu.joueur_local)+res[1])
             elif not(jeu.partie_finie) and event.type == pygame.MOUSEBUTTONDOWN \
               or event.type == pygame.MOUSEMOTION \
               or event.type == pygame.MOUSEBUTTONUP: 
-                piece_deplacee = plateau.handle_mouse_click(event, jeu, reseau)
+
+                res = plateau.handle_mouse_click(event, jeu)
+                if res != None: 
+                    ############################
+                    # Déplacement d'une lettre #
+                    ############################
+                    src = res[0].pos # cellule initiale
+                    dst = res[1] # cellule finale
+                    result = jeu.deplacer_piece(jeu.joueur_local, dst, res[0])
+                    if result and reseau!=None:
+                        reseau.envoyer('move', src + ',' + dst)
 
         # Afficher le plateau (arrière-plan, chevalet, lettre en mouvement, 
         # statistiques)
