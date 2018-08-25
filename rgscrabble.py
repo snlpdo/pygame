@@ -151,13 +151,11 @@ def main():
                     plateau.set_message(result[1])
 
                 else: # Coup valide
-                    print(result[1])
                     plateau.set_message(result[1], 'info')
                     plateau.memoriser(jeu.joueurs[jeu.joueur_actuel-1])
                     tirage = jeu.completer_chevalet(jeu.joueur_actuel)
                     if reseau!=None:
                         if tirage=="##FIN##":
-                            print("fin de partie")
                             reseau.envoyer_multiple(['message', 'validation', 'tirage', 'fin'], 
                                 [result[1], '', ''.join(tirage), ''])
                             reseau.reception.stop()

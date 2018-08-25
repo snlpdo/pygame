@@ -592,13 +592,13 @@ class Jeu():
             joueur = self.joueurs[jnum-1]
             joueur.score += score
             if len(mots)==1:
-                msg = 'mot: '
+                msg = 'mot ({}): '.format(score)
             else:
-                msg = 'mots: '
+                msg = 'mots ({}): '.format(score)
             # Vérifier les mots
             for i, m in enumerate(mots):
                 if not(self.dico.valide(m.lower())):
-                    return (False, 'Mot '+m+' non valide.')
+                    return (False, 'Mot ' + m + ' non valide.')
                 msg += m + '(' + str(points[i]) + ') '
             return (True, msg)
 
@@ -624,7 +624,10 @@ class Jeu():
                 c = self.grille[ymin][x] 
                 if c=='': return (0,"Mot avec un espace")
 
-                points_lettre = (Lettre.alphabet[c])[1]
+                if c=='?':
+                    points_lettre = 0
+                else:
+                    points_lettre = (Lettre.alphabet[c])[1]
 
                 # Identifier si la lettre est en placement provisoire
                 cell_name = self.get_cell_name(x, ymin)
@@ -716,6 +719,8 @@ class Jeu():
         return (bonus_lettre, bonus_mot)
 
     def vainqueur(self):
+        """ Déterminer le vaiqueur de la partie. """
+
         id_max = 0
         for i in range(len(self.joueurs)):
             if self.joueurs[i].score > self.joueurs[id_max].score:

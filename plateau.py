@@ -474,9 +474,9 @@ class Plateau():
 
         if self.msg_time_count > 0:
             self.msg_time_count -= 1
-            self.print_message()
+            self.__display_message()
 
-    def print_message(self):
+    def __display_message(self):
         """ Afficher un message d'information temporaire en bas
         de la fenêtre. Le type indiqué influence le format 
         d'affichage """
@@ -486,14 +486,23 @@ class Plateau():
             text = font.render(self.message, True, ROUGE)
         else: # texte en noir
             text = font.render(self.message, True, NOIR)
-        self.screen.blit(text, (LEFT_MARGIN, TOP_MARGIN + 17*self.hCell+10))
+        self.screen.blit(text, (LEFT_MARGIN, TOP_MARGIN + 17*self.hCell+15))
 
     def afficher_fin(self, screen, jeu):
         """ Affichage de l'écran de fin. """
 
         v_idx = jeu.vainqueur()-1
-        m_l1 = 'Victoire de ' + jeu.joueurs[v_idx].pseudo + ' ('+\
-         str(jeu.joueurs[v_idx].score) +' points)'
+        score = jeu.joueurs[v_idx].score
+
+        egalite = False
+        for i,joueur in enumerate(jeu.joueurs):
+            if joueur.score==score and i!=v_idx:
+                egalite = True
+
+        if egalite:
+            m_l1 = 'Match nul ({} points)'.format(score)
+        else:
+            m_l1 = 'Victoire de {} ({} points)'.format(jeu.joueurs[v_idx].pseudo,score)
         m_l2= 'Appuyer sur une touche pour quitter.'
         font = pygame.font.SysFont('comicsans', 48)
         text = font.render(m_l1, True, (255, 255, 0))
