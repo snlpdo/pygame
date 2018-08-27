@@ -1,29 +1,47 @@
 from threading import Thread
 import random
 import socket
+import struct
+import time
 
 class Reseau():
     def __init__(self, args):
-        if args.serveur: # Mode serveur         
+        if args.serveur: # Mode serveur     
             print("\n=== Mode réseau (serveur)===")
-            print("Attente de connexion...")
 
+            balise = Balise('rgscrabble')
+            balise.start()
+
+            print("Attente de connexion...")
             ss = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             ss.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            ss.bind( ("192.168.1.43", 7175) )
-            ss.listen(args.nombre_joueurs-1) 
-            
-            # Connexion avec client (1 seul pour le moment)
+            ss.bind( ('', 7175) )
+            ss.listen(args.nombre_joueurs-1) # 1 seul client pour le moment
             self.sock, dist_sock = ss.accept()
-            print("Client connecté")
+            print('Client connecté')
+            balise.stop()
 
         elif args.client: # Mode client
-            print("\n=== Mode réseau (client)===")
-            print("Connexion au serveur "+args.client)
+            print('\n=== Mode réseau (client)===')
 
+            ss = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+            ss.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            ss.bind(('224.1.1.1', 7175))
+            mreq = struct.pack("4sl", socket.inet_aton('224.1.1.1'), socket.INADDR_ANY)
+            ss.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+
+            received = False
+            while not(received):
+                message, address = ss.recvfrom(128)
+                message = message.decode('ascii')
+                if 'rgscrabble' in message:
+                    print('Balise reçue')
+                    received = True
+
+            print('Connexion au serveur ')
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.sock.connect( (args.client, 7175))
-            print("Connecté au serveur")
+            self.sock.connect( (address[0], 7175))
+            print('Connecté au serveur')
 
     def init_communication(self, args, jeu):
         """ Communication initiale entre le serveur et le client
@@ -186,6 +204,25 @@ class Reseau():
         # print("[<-]", message)
         return message
 
+class Balise(Thread):
+    def __init__(self, message):
+        Thread.__init__(self)
+        self.message = message
+        self.continuer = True
+
+    def run(self):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+        sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 2)
+
+        while self.continuer:
+            print("Émission balise")
+            sock.sendto(bytes(self.message, 'ascii'), ('224.1.1.1', 7175))
+            time.sleep(1) # 1s
+
+    def stop(self):
+        self.continuer = False
+
+
 class Reception(Thread):
     def __init__(self, socket, jeu, plateau):
         Thread.__init__(self)
@@ -200,8 +237,10 @@ class Reception(Thread):
             messages = []
             try:
                 messages = self.socket.recv(1024).decode('ascii').split('&')
+            except socket.timeout: # timeout
+                pass
             except:
-                pass # pour timeout
+                raise
 
             # numéro de joueur de l'adversaire
             if self.jeu.joueur_local==1:

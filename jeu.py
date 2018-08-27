@@ -591,14 +591,14 @@ class Jeu():
 
         if len(self.joueurs[self.joueur_actuel-1].provisoire)==0:
             # Aucune lettre posée, le joueur veu passer son tour
+            if self.sound!=None: self.sound.play()
             return (True, 'je passe mon tour')
-            self.sound.play()
 
         score, mots, points = self.verifier_positionnement()
         if score==0: # Coup invalide
             return (False, mots[0]) 
         else: # OK
-            self.sound.play()
+            if self.sound!=None: self.sound.play()
             if ' ' in ''.join(mots):
                 return (False, 'Il faut attribuer une lettre au joker avec un clic droit sur la pièce')
 

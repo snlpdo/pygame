@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
 
 # À faire:
-#  - réseau: 
-#      * démarrage du serveur sur toutes les adresses IPv4
-#      * détection automatique du serveur
+#  - Fenêtre graphique lors du démarrage réseau
 #
 # Bugs connus:
-#  - Horodatage du fichier de sauvegarde (heure UTC au lieu de locale)
 
 import sys
 import pygame
@@ -35,8 +32,8 @@ def cli_setup():
     parser.add_argument('--serveur', help='Démarrer le jeu en réseau en mode serveur'+
         ' Le nombre de participant doit être supérieur à 1 dans cette situation.',
         action="store_true")
-    parser.add_argument('--client', 
-        help="Se connecter au serveur dont l'adresse IPv4 est fournie.")
+    parser.add_argument('--client', action='store_true',
+        help="Se connecter au serveur (autodétection).")
     parser.add_argument('--pseudo', help='Nom à utiliser pour la partie. Pour une, '+
         'partie multijoueur en mode local, un numéro distinct est ajouté pour participant.',
         default='Joueur')
