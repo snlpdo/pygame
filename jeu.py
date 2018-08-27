@@ -367,6 +367,8 @@ class Jeu():
             for i in range(len(j.chevalet[0])):
                 if j.chevalet[0][i]==None:
                     s += ' '
+                elif j.chevalet[0][i].char==' ': # joker
+                    s += '?'
                 else:
                     s += j.chevalet[0][i].char
             s += '|\n'
@@ -590,7 +592,6 @@ class Jeu():
                 return (False, 'Il faut attribuer une lettre au joker avec un clic droit sur la pièce')
 
             joueur = self.joueurs[jnum-1]
-            joueur.score += score
             if len(mots)==1:
                 msg = 'mot ({}): '.format(score)
             else:
@@ -600,6 +601,7 @@ class Jeu():
                 if not(self.dico.valide(m.lower())):
                     return (False, 'Mot ' + m + ' non valide.')
                 msg += m + '(' + str(points[i]) + ') '
+            joueur.score += score
             return (True, msg)
 
     def identifier_mot(self, horizontal, xmin, xmax, ymin, ymax, joueur):
@@ -624,11 +626,6 @@ class Jeu():
                 c = self.grille[ymin][x] 
                 if c=='': return (0,"Mot avec un espace")
 
-                if c=='?':
-                    points_lettre = 0
-                else:
-                    points_lettre = (Lettre.alphabet[c])[1]
-
                 # Identifier si la lettre est en placement provisoire
                 cell_name = self.get_cell_name(x, ymin)
                 lettre_provisoire = None
@@ -636,6 +633,16 @@ class Jeu():
                     if l.pos == cell_name:
                         lettre_provisoire = l
                         break
+
+                # Points de la lettre
+                if c=='?': # aucun si joker
+                    points_lettre = 0
+                    if lettre_provisoire==None: # pas un nouvelle lettre_provisoire
+                        for j in self.jokers:
+                            if j.pos == cell_name:
+                                c = j.joker_char
+                else:
+                    points_lettre = (Lettre.alphabet[c])[1]
 
                 bonus_lettre = 1
                 if lettre_provisoire!=None: # prendre en compte le bonus
@@ -669,11 +676,6 @@ class Jeu():
                 c = self.grille[y][xmin] 
                 if c=='': return (0,"Mot avec un espace")
 
-                if c=='?':
-                    points_lettre = 0
-                else:
-                    points_lettre = (Lettre.alphabet[c])[1]
-
                 # Identifier si la lettre est en placement provisoire
                 cell_name = self.get_cell_name(xmin, y)
                 lettre_provisoire = None
@@ -681,6 +683,16 @@ class Jeu():
                     if l.pos == cell_name:
                         lettre_provisoire = l
                         break
+
+                # Points de la lettre
+                if c=='?': # aucun si joker
+                    points_lettre = 0
+                    if lettre_provisoire==None: # pas un nouvelle lettre_provisoire
+                        for j in self.jokers:
+                            if j.pos == cell_name:
+                                c = j.joker_char
+                else:
+                    points_lettre = (Lettre.alphabet[c])[1]
 
                 bonus_lettre = 1
                 if lettre_provisoire!=None: # prendre en compte le bonus
