@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 # À faire:
-#  - Permettre de passer son tour
 #  - réseau: 
 #      * démarrage du serveur sur toutes les adresses IPv4
 #      * détection automatique du serveur
@@ -131,12 +130,16 @@ def main():
         # statistiques)
         plateau.draw(jeu)
         
-        if not(jeu.partie_finie):
+        # Message d'information termporaire
+        plateau.afficher_message()
+
+        if not(jeu.partie_finie): #### Partie en cours ####
+
             # Comptabiliser le score actuel du coup en cours
             total_points, mots, points = jeu.verifier_positionnement()
 
             # Bouton de validation (affichant les points)
-            plateau.afficher_bouton(total_points, 
+            plateau.afficher_bouton(total_points, jeu, 
                 jeu.joueur_local==jeu.joueur_actuel)
 
             ###################
@@ -163,11 +166,8 @@ def main():
                                 [result[1], '', ''.join(tirage)])
                     else:
                         jeu.joueur_local = jeu.joueur_actuel
-
-        # Message d'information termporaire
-        plateau.afficher_message()
-
-        if jeu.partie_finie:
+        
+        else: #### Partie finie ####
             plateau.afficher_fin(screen, jeu)
 
         # Mettre à jour l'écran

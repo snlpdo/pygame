@@ -571,9 +571,13 @@ class Jeu():
                 if p.pos == "H8": positionOK = True
             if not(positionOK):
                 return (0, ["Le premier mot doit recouvrir la case H8"], None)
-        else: # Les autres mots ne doivent pas être isolés
+        else: # Les autres mots ne doivent pas être isolés (sauf s'ils passent sur H8)
             if len(mots)==1 and len(mots[0])==len(joueur.provisoire):
-              return (0, ["Le mot ne peut être isolé du reste du jeu"], None)
+                positionOK = False
+                for p in joueur.provisoire:
+                    if p.pos == "H8": positionOK = True
+                if not(positionOK):
+                    return (0, ["Le mot ne peut être isolé du reste du jeu"], None)
 
         # Détection d'un scrabble
         scrabble = len(joueur.provisoire)==7
@@ -583,6 +587,10 @@ class Jeu():
 
     def valider(self, jnum):
         """ Valider le coup d'un joueur """
+
+        if len(self.joueurs[self.joueur_actuel-1].provisoire)==0:
+            # Aucune lettre posée, le joueur veu passer son tour
+            return (True, 'je passe mon tour')
 
         score, mots, points = self.verifier_positionnement()
         if score==0: # Coup invalide

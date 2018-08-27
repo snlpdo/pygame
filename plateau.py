@@ -52,7 +52,7 @@ class Plateau():
 
         # Bouton de validation
         self.button = Button((LEFT_MARGIN + 13*self.wCell, 
-            TOP_MARGIN + 16*self.hCell + 5))
+            TOP_MARGIN + 16*self.hCell + 5), 'Valider', 'Passer')
 
     def __draw_bonus_cell(self, type_case, img, area):
         """ Dessine la case bonus appropriée sur une zone spécifique
@@ -309,16 +309,20 @@ class Plateau():
                 self.piece_selectionnee_pos[1]-self.piece_selectionnee_delta[1])
             self.screen.blit(self.piece_selectionnee.img, pos)
 
-    def afficher_bouton(self, nb_points, visible):
-        if visible:
-            if nb_points!=0:
-                if nb_points==1:
-                    text = '(1 point)'
+    def afficher_bouton(self, nb_points, jeu, visible):
+        if visible: 
+            if len(jeu.joueurs[jeu.joueur_actuel-1].provisoire)==0: # aucune lettre placées
+                self.button.set_alternative(True)
+            else: # Coup potentiel à valider
+                self.button.set_alternative(False)
+                if nb_points!=0:
+                    if nb_points==1:
+                        text = '(1 point)'
+                    else:
+                        text = '(' + str(nb_points) + ' points)'
+                    self.button.set_subtext(text)
                 else:
-                    text = '(' + str(nb_points) + ' points)'
-                self.button.set_subtext(text)
-            else:
-                self.button.set_subtext(None)
+                    self.button.set_subtext(None)
             self.button.draw(self.screen)
 
     def memoriser(self, joueur):
