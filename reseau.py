@@ -1,7 +1,6 @@
 from threading import Thread
 import random
 import socket
-import pygame
 
 class Reseau():
     def __init__(self, args):
@@ -195,7 +194,6 @@ class Reception(Thread):
         self.jeu = jeu
         self.plateau = plateau
         self.socket.settimeout(3) # 3s
-        self.sound = pygame.mixer.Sound('sound.wav')
 
     def run(self):
         while self.continuer:
@@ -242,9 +240,6 @@ class Reception(Thread):
                     # dans la pioche) ou la fin de partie 
                     if len(message[1])>0 and message[1][0]!="#" or message[1]=='':
                         self.jeu.affecter_tirage(self.jeu.joueur_actuel, message[1], True)
-
-                    # Avertir que l'adversaire a fini de jouer à l'aide d'un son
-                    self.sound.play()
 
                 elif message[0]=='detail_coup': # Détail du coup joué
                     nom = self.jeu.joueurs[self.jeu.joueur_actuel-1].pseudo

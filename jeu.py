@@ -43,6 +43,7 @@ class Jeu():
         self.tour_jeu = 1
         self.jokers = []
         self.dico = Dictionnaire()
+        self.sound = pygame.mixer.Sound('sound.wav')
 
         # Charger un fichier ?
         if args.input!=None: 
@@ -158,7 +159,7 @@ class Jeu():
         l'horodate du moment. """
 
         # Nom du fichier
-        filename = time.strftime("%Y%m%d-%H%M.sav", time.gmtime())
+        filename = time.strftime("%Y%m%d-%H%M.sav", time.localtime())
 
         out = open(filename, 'w')
 
@@ -591,11 +592,13 @@ class Jeu():
         if len(self.joueurs[self.joueur_actuel-1].provisoire)==0:
             # Aucune lettre posée, le joueur veu passer son tour
             return (True, 'je passe mon tour')
+            self.sound.play()
 
         score, mots, points = self.verifier_positionnement()
         if score==0: # Coup invalide
             return (False, mots[0]) 
         else: # OK
+            self.sound.play()
             if ' ' in ''.join(mots):
                 return (False, 'Il faut attribuer une lettre au joker avec un clic droit sur la pièce')
 

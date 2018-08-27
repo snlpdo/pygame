@@ -313,6 +313,7 @@ class Plateau():
         if visible: 
             if len(jeu.joueurs[jeu.joueur_actuel-1].provisoire)==0: # aucune lettre placées
                 self.button.set_alternative(True)
+                self.button.set_subtext(None)
             else: # Coup potentiel à valider
                 self.button.set_alternative(False)
                 if nb_points!=0:
