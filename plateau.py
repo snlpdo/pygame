@@ -48,6 +48,7 @@ class Plateau():
         self.message = ""
         self.msg_time_count = 0
         self.msg_type = "error"
+        self.infinite = False
 
         # Bouton de validation
         self.button = Button((LEFT_MARGIN + 13*self.wCell, 
@@ -353,10 +354,11 @@ class Plateau():
         """ Gestion des clics de souris sur le plateau (lettre ou bouton). """
 
         if mouse_event.type == pygame.MOUSEBUTTONDOWN and mouse_event.button==1: # clic droit
-            result = self.__check_start_move(mouse_event, jeu) # Début ? 
+            result = self.__check_start_move(mouse_event, jeu) # Début ?
             if result == None:
                 self.check_click_on_button(mouse_event)
             self.edition_joker = None
+            self.cancel_message()
         elif mouse_event.type == pygame.MOUSEMOTION:
             self.__continue_move(mouse_event, jeu)
         elif mouse_event.type == pygame.MOUSEBUTTONUP:
@@ -461,19 +463,26 @@ class Plateau():
         """ Vérifie si le clic de souris s'effectue sur le bouton """
         self.button.check_mouse_click(mouse_event)
 
-    def set_message(self, m, mtype='error', fps=30, nb_sec=3):
+    def set_message(self, m, mtype='error', fps=30, nb_sec=3, infinite=False):
         """ Définir le message à afficher en bas de la fenêtre, 
         en spécifiant sa durée d'affichage et son type. """
 
         self.message = m
         self.msg_time_count = nb_sec*fps
         self.msg_type = mtype
+        self.infinite = infinite
+
+    def cancel_message(self):
+        # Effacer le message en cours d'affichage
+
+        self.infinite = False
+        self.msg_time_count = 0
 
     def afficher_message(self):
         """ Mettre à jour l'affichage du message """
 
-        if self.msg_time_count > 0:
-            self.msg_time_count -= 1
+        if self.infinite or self.msg_time_count > 0:
+            if not(self.infinite): self.msg_time_count -= 1
             self.__display_message()
 
     def __display_message(self):

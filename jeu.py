@@ -592,10 +592,7 @@ class Jeu():
                 return (False, 'Il faut attribuer une lettre au joker avec un clic droit sur la pièce')
 
             joueur = self.joueurs[jnum-1]
-            if len(mots)==1:
-                msg = 'mot ({}): '.format(score)
-            else:
-                msg = 'mots ({}): '.format(score)
+            msg = '{} points: '.format(score)
             # Vérifier les mots
             for i, m in enumerate(mots):
                 if not(self.dico.valide(m.lower())):

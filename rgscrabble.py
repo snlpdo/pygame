@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 
 # À faire:
-#  - Vérifier les mots dans un dictionnaire
-#  - Émettre un message sonore lorsque c'est au tour du joueur suivant
+#  - Permettre de passer son tour
 #  - réseau: 
 #      * démarrage du serveur sur toutes les adresses IPv4
 #      * détection automatique du serveur
@@ -155,12 +154,12 @@ def main():
                     plateau.memoriser(jeu.joueurs[jeu.joueur_actuel-1])
                     tirage = jeu.completer_chevalet(jeu.joueur_actuel)
                     if reseau!=None:
-                        if tirage=="##FIN##":
-                            reseau.envoyer_multiple(['message', 'validation', 'tirage', 'fin'], 
+                        if tirage=="##FIN##": # fin de la partie
+                            reseau.envoyer_multiple(['detail_coup', 'validation', 'tirage', 'fin'], 
                                 [result[1], '', ''.join(tirage), ''])
                             reseau.reception.stop()
-                        else:
-                            reseau.envoyer_multiple(['message', 'validation', 'tirage'], 
+                        else: # coup classique
+                            reseau.envoyer_multiple(['detail_coup', 'validation', 'tirage'], 
                                 [result[1], '', ''.join(tirage)])
                     else:
                         jeu.joueur_local = jeu.joueur_actuel

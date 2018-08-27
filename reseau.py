@@ -1,6 +1,7 @@
 from threading import Thread
 import random
 import socket
+import pygame
 
 class Reseau():
     def __init__(self, args):
@@ -194,6 +195,7 @@ class Reception(Thread):
         self.jeu = jeu
         self.plateau = plateau
         self.socket.settimeout(3) # 3s
+        self.sound = pygame.mixer.Sound('sound.wav')
 
     def run(self):
         while self.continuer:
@@ -212,11 +214,14 @@ class Reception(Thread):
             for message in messages:
                 message = message.split('=')
 
-                if message[0]=='move':
+                if message[0]=='move': # Déplacer une pièce
+
+                    # Identifier les cases de départ et d'arrivée
                     move = message[1].split(',')
                     src = move[0]
                     dst = move[1]
 
+                    # Récupérer la pièce concernée
                     if src[0]=='Q': # pièce depuis le chevalet
                         piece = self.jeu.joueurs[joueur_num-1].chevalet[0][int(src[1:])-4]
                     else: # pièce déjà sur le plateau
@@ -224,15 +229,27 @@ class Reception(Thread):
                             if l.pos == src:
                                 piece = l
                                 break
+
+                    # Effectuer le déplacement
                     self.jeu.deplacer_piece(joueur_num, dst, piece, True)
-                elif message[0]=='validation':
-                    result = self.jeu.valider(joueur_num)
+
+                elif message[0]=='validation': # Valider le coup en cours
+                    self.jeu.valider(joueur_num)
                     self.plateau.memoriser(self.jeu.joueurs[joueur_num-1])
-                elif message[0]=='tirage':
+
+                elif message[0]=='tirage': # Tirage au sort de l'adversaire (un coup a été joué)
+                    # Ne pas prendre en compte les tirages vides (quand plus aucune lettre
+                    # dans la pioche) ou la fin de partie 
                     if len(message[1])>0 and message[1][0]!="#" or message[1]=='':
                         self.jeu.affecter_tirage(self.jeu.joueur_actuel, message[1], True)
-                elif message[0]=='message':
-                    self.plateau.set_message(message[1], 'info')
+
+                    # Avertir que l'adversaire a fini de jouer à l'aide d'un son
+                    self.sound.play()
+
+                elif message[0]=='detail_coup': # Détail du coup joué
+                    nom = self.jeu.joueurs[self.jeu.joueur_actuel-1].pseudo
+                    self.plateau.set_message(nom+' a fait ' + message[1], 'info', infinite=True)
+
                 elif message[0]=='joker':
                     # Caractère
                     jnum = int(message[1][0])
