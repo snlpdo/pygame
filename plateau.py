@@ -227,7 +227,7 @@ class Plateau():
         en ajoutant un point bleu dans le coin supérieur gauche.
         """ 
         
-        joueur = jeu.joueurs[jeu.joueur_local-1]
+        joueur = jeu.get_local_player()
 
         font = pygame.font.SysFont('comicsans', 18)
         text = font.render(joueur.pseudo, True, NOIR)
@@ -256,7 +256,7 @@ class Plateau():
                 x, y = self.get_cell_orig(l.pos)
                 self.screen.blit(l.img, (x, y))
                 # Carré dans le coin supérieur gauche
-                if jeu.joueur_local == jeu.joueur_actuel:
+                if jeu.local_is_playing():
                     couleur = BLEU
                 else:
                     couleur = ROUGE
@@ -280,7 +280,7 @@ class Plateau():
             s += ' (' + str(len(jeu.pioche)) + ' lettre restante)'
 
         # Joueur dont c'est le tour
-        if jeu.joueur_local==jeu.joueur_actuel:
+        if jeu.local_is_playing():
             s += ' - À vous de jouer ('+jeu.joueurs[jeu.joueur_actuel-1].pseudo+')'
         else:
             s += ' - À '+ jeu.joueurs[jeu.joueur_actuel-1].pseudo + ' de jouer'
@@ -397,7 +397,7 @@ class Plateau():
     def __check_cell(self, pos, jeu):
         """ Indique si la position indiquée correspond à une case contenant pièce
             pouvant se déplacer """
-        joueur = jeu.joueurs[jeu.joueur_local-1]
+        joueur = jeu.get_local_player()
 
         cell_name =  self.get_cell_name(pos)
         if cell_name!=None:

@@ -19,7 +19,7 @@ if __name__ == '__main__':
 		mot = input('Mot à vérifier: ')
 
 		if dico.valide(mot):
-			print("le mot", mot, "existe")
+			print(mot, "-> oui")
 		else:
-			print("le mot", mot, "n'existe pas")
+			print(mot, "-> non")
 

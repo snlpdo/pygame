@@ -136,8 +136,7 @@ def main():
             total_points, mots, points = jeu.verifier_positionnement()
 
             # Bouton de validation (affichant les points)
-            plateau.afficher_bouton(total_points, jeu, 
-                jeu.joueur_local==jeu.joueur_actuel)
+            plateau.afficher_bouton(total_points, jeu, jeu.local_is_playing())
 
             ###################
             # Valider un coup #

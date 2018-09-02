@@ -4,6 +4,8 @@ import socket
 import struct
 import time
 
+from lettre import *
+
 class Reseau():
     def __init__(self, args):
         if args.serveur: # Mode serveur     
@@ -54,7 +56,7 @@ class Reseau():
 
             # Réception pseudo
             elif i==1 and args.serveur or i==0 and not(args.serveur): 
-                param, remote_pseudo = self.recevoir(128)
+                param, remote_pseudo = self.recevoir()
                 if param!='pseudo':
                     print('Reçu paramètre ' + param + ' au lieu de pseudo')
                     quit()
@@ -62,7 +64,7 @@ class Reseau():
             # Envoi nombre aléatoire
             elif i==2 and args.serveur or i==3 and not(args.serveur): 
                 if args.serveur and args.input: # Pour le serveur
-                    if jeu.joueur_actuel==jeu.joueur_local:
+                    if jeu.local_is_playing():
                         local_rand = 1.5 # prise de la main par le serveur
                     else:
                         local_rand = -0.5 # prise de la main par l'adversaire
@@ -72,7 +74,7 @@ class Reseau():
 
             # Réception nombre aléatoire
             elif i==3 and args.serveur or i==2 and not(args.serveur): 
-                param, remote_rand = self.recevoir(128)
+                param, remote_rand = self.recevoir()
                 if param != 'priority' : 
                     print('Reçu paramètre '+param+' au lieu de priority')
                     quit()
@@ -94,23 +96,28 @@ class Reseau():
                         msg.append('?')
                     else:
                         msg.append(jeu.grille[i][j])
+            jokers = ""
+            if len(jeu.jokers)>=1:
+                jokers += jeu.jokers[0].joker_char
+            if len(jeu.jokers)>=2:
+                jokers += jeu.jokers[1].joker_char
             num_adversaire = (jeu.joueur_local%2)+1
             ch1 = [ l.char for l in jeu.joueurs[0].chevalet[0] if l!=None ]
             ch2 = [ l.char for l in jeu.joueurs[1].chevalet[0] if l!=None ]
 
-            self.envoyer_multiple(['grille', 'numero', 'ch1', 'ch2', 
+            self.envoyer_multiple(['grille', 'jokers', 'numero', 'ch1', 'ch2', 
                 'sc1', 'sc2', 'tour'], 
-                [''.join(msg), str(num_adversaire),''.join(ch1),''.join(ch2), 
+                [''.join(msg), jokers, str(num_adversaire),''.join(ch1),''.join(ch2), 
                  str(jeu.joueurs[0].score), str(jeu.joueurs[1].score), 
                  str(jeu.tour_jeu)])
 
             # attendre l'ack du client
-            self.recevoir(64) 
+            self.recevoir() 
 
         else: # client
             # Réception de la grille, du numéro de joueur à utiliser, des chevalets,
             # des scores et du numéro de tour de jeu
-            messages = self.recevoir_multiple(1024)
+            messages = self.recevoir_multiple()
 
             for message in messages:
                 message = message.split('=')
@@ -120,9 +127,7 @@ class Reseau():
                     for idx in range(15*15):
                         j = idx%15
                         i = idx//15
-                        if rgrille[idx]=='?':
-                            jeu.grille[i][j] = ' '
-                        elif rgrille[idx]==' ':
+                        if rgrille[idx]==' ':
                             jeu.grille[i][j] = ''
                         else:
                             jeu.grille[i][j] = rgrille[idx]
@@ -132,6 +137,15 @@ class Reseau():
                             lettre.pos = jeu.get_cell_name(j, i)
                             # L'attribuer arbitrairement au 1er joueur
                             jeu.joueurs[0].provisoire.append(lettre)
+                            if rgrille[idx]=='?':
+                                jeu.jokers.append(lettre)
+
+                elif message[0]=='jokers': # ĺe numéro du joueur local
+                    if len(message[1])>=1:
+                        jeu.jokers[0].joker_char = message[1][0]
+                    if len(message[1])>=2:
+                        jeu.jokers[1].joker_char = message[1][0]
+                    num_adversaire = (jeu.joueur_local%2)+1
 
                 elif message[0]=='numero': # ĺe numéro du joueur local
                     jeu.joueur_local = int(message[1])
@@ -154,7 +168,7 @@ class Reseau():
             self.envoyer('PRET', '')
 
         # Définir les pseudos
-        jeu.joueurs[jeu.joueur_local-1].pseudo = args.pseudo
+        jeu.get_local_player().pseudo = args.pseudo
         jeu.joueurs[num_adversaire-1].pseudo = remote_pseudo
 
         # Déterminer le 1er joueur (tirage au sort le plus grand)
@@ -164,44 +178,60 @@ class Reseau():
             jeu.joueur_actuel = (jeu.joueur_local%2)+1
 
         # Modifier les pseudos si identiques
-        if jeu.joueurs[jeu.joueur_local-1].pseudo==jeu.joueurs[num_adversaire-1].pseudo:
+        if jeu.get_local_player().pseudo==jeu.joueurs[num_adversaire-1].pseudo:
             jeu.joueurs[0].pseudo += '1'
             jeu.joueurs[1].pseudo += '2'
 
     def demarrer_ecoute(self, jeu, plateau):
         """ Lancer le thread d'écoute et d'analyse continue. """
 
-        self.reception = Reception(self.sock, jeu, plateau)
+        self.reception = Reception(self, jeu, plateau)
         self.reception.start()
 
     def envoyer(self, param, valeur):
-        """ Envoyer un message au pair d'un type donné. """
+        """ Envoyer un message de la forme <param>=<valeur> à un pair. Le
+        message est précédé d'un en-tête de 2 octets qui indique le nombre d'octets
+        qui suivent. """
 
-        message = param + '=' + valeur
-        self.sock.sendall(bytes(message, 'ascii'))
-        # print("[->]", message)
+        message = bytes(param + '=' + valeur, 'ascii')
+        l = len(message).to_bytes(2, byteorder='big')
+        self.sock.sendall(l+message)
+        print('[->'+str(len(message))+']', message)
 
     def envoyer_multiple(self, params, valeurs):
-        """ Envoyer plusieurs messages consécutifs au pair. """
+        """ Envoyer plusieurs messages de la forme <param>=<valeur>
+        concaténés par '&' à un pair. Ces messages sont précédés d'un en-tête 
+        de 2 octets qui indique le nombre d'octets qui suivent. """
 
         message = ''
         for i in range(len(params)):
             message += params[i] + '=' + valeurs[i]
             if i<len(params)-1:
                 message += '&'
-        self.sock.sendall(bytes(message, 'ascii'))
-        # print("[->]", message)
+        message = bytes(message, 'ascii')
+        l = len(message).to_bytes(2, byteorder='big')
+        self.sock.sendall(l+message)
+        print('[->'+str(len(message))+']', message)
 
-    def recevoir(self, nbBytes):
-        """ Récupérer un message de longueur données auprès du pair. """
+    def recevoir(self):
+        """ Récupérer un message au format <param>=<valeur> auprès du pair. 
+        Le message est précédé d'un en-tête de 2 octets indiquant le nombre
+        d'octets qui suivent. """
 
+        nbBytes = int.from_bytes(self.sock.recv(2), 'big')
         message = self.sock.recv(nbBytes).decode('ascii').split('=')
-        # print("[<-]", message)
+        print('[<-'+str(nbBytes)+']', message)
         return message
 
-    def recevoir_multiple(self, nbBytes):
+    def recevoir_multiple(self):
+        """ Récupérer plusieurs messages au format <param>=<valeur> concaténés
+        par un '&' auprès du pair. 
+        Ces messages sont précédés d'un en-tête de 2 octets indiquant le nombre
+        d'octets qui suivent. """
+
+        nbBytes = int.from_bytes(self.sock.recv(2), 'big')
         message = self.sock.recv(nbBytes).decode('ascii').split('&')
-        # print("[<-]", message)
+        print('[<-'+str(nbBytes)+']', message)
         return message
 
 class Balise(Thread):
@@ -224,19 +254,19 @@ class Balise(Thread):
 
 
 class Reception(Thread):
-    def __init__(self, socket, jeu, plateau):
+    def __init__(self, reseau, jeu, plateau):
         Thread.__init__(self)
-        self.socket = socket
+        self.reseau = reseau
         self.continuer = True
         self.jeu = jeu
         self.plateau = plateau
-        self.socket.settimeout(3) # 3s
+        self.reseau.sock.settimeout(3) # 3s
 
     def run(self):
         while self.continuer:
             messages = []
             try:
-                messages = self.socket.recv(1024).decode('ascii').split('&')
+                messages = self.reseau.recevoir_multiple()
             except socket.timeout: # timeout
                 pass
             except:

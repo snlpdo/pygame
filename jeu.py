@@ -10,6 +10,20 @@ from dictionnaire import *
 LIGNES = "ABCDEFGHIJKLMNO"
 
 class Jeu():
+    """ Gestion de la partie avec une grille vide ou chargée depuis un fichier.
+
+    Format du fichier:
+        1) Numéro du tour de jeu
+        2) Nombre de joueurs
+        3) Numéro du joueur qui joue actuellement
+        4) Numéro du joueur local
+        5) Signification des jokers (ordre d'apparition dans la grille): ?, ?x ou ?xx 
+        6) Contenu de la grille (15 lignes de 15 caractères, jokers représentés par ?)
+        7) Pour chaque joueur (dans l'ordre naturel): 
+            7a) pseudo
+            7b) score
+            7c) chevalet
+    """
 
     grille_bonus = [
          ["MT","  ","  ","LD","  ","  ","  ","MT","  ","  ","  ","LD","  ","  ","MT"],
@@ -29,55 +43,75 @@ class Jeu():
          ["MT","  ","  ","LD","  ","  ","  ","MT","  ","  ","  ","LD","  ","  ","MT"]]
 
     def __init__(self, args, reseau):
-        """ Contruire un nouveau jeu original ou chargé depuis un fichier de 
-        sauvegarde. """
+        """ Contruire un jeu nouveau ou chargé depuis un fichier de sauvegarde. """
 
         # Pioche commune
         self.pioche = Lettre.get_pioche()
 
-        # Valeur par défaut
-        self.grille = [ ["" for x in range(15)] for y in range(15)] # Grille vide
+        # Grille vide (toutes les case avec '')
+        NUM_LIGNES = len(self.grille_bonus)
+        NUM_COLS = len(self.grille_bonus[0])
+        self.grille = [ ['' for x in range(NUM_COLS)] for y in range(NUM_LIGNES)] 
+
         self.joueur_local = 1
         self.joueur_actuel = 1 
-        self.partie_finie = False
+
         self.tour_jeu = 1
+        self.partie_finie = False
+
         self.jokers = []
         self.dico = Dictionnaire()
         self.sound = pygame.mixer.Sound('sound.wav')
 
-        # Charger un fichier ?
-        if args.input!=None: 
+        if args.input!=None: # Partie à charger depuis un fichier
             self.__charger_fichier(args, reseau)
-        else: # créer uniquement les joueurs
+        else: # Nouvelle partie, créer uniquement les joueurs
             self.joueurs = [Joueur() for i in range(args.nombre_joueurs)]
             for i, joueur in enumerate(self.joueurs):
                 joueur.pseudo = args.pseudo + str(i+1)
 
-        # Partie réseau ?
+        # Échanges d'informations initiales (pseudo, tirage au sort du 1er joueur)
         if reseau!=None:
             reseau.init_communication(args, self)
 
+    def local_is_playing(self):
+        """ Indique s'il s'agit du tour du joueur local. """
+
+        return self.joueur_local==self.joueur_actuel
+
+    def get_local_player(self):
+        return self.joueurs[self.joueur_local-1]
+
+    def get_current_player(self):
+        return self.joueurs[self.joueur_actuel-1]        
+
     def debuter_partie(self, reseau, plateau):
+        """ Tirage au sort du ou des chevalets selon les cas. Les informations de
+        tirage sont échangés en mode réseau. """
+
         if reseau != None: 
-            # En mode réseau, il ne faut tirer au sort que les lettres du joueur local
-            # et les envoyer à l'adversaire
+            # Tirer au sort du chevalet selon l'ordre établi et envoi à l'adversaire
             for i in range(2): # Action en 2 temps
-                if i==0 and self.joueur_actuel==self.joueur_local \
-                  or i==1 and not(self.joueur_actuel==self.joueur_local):
+
+                # Émission
+                if i==0 and self.local_is_playing() or i==1 and not(self.local_is_playing()):
                     # Tirer au sort le chevalet 
                     tirage = self.completer_chevalet(i+1, False)
                     # Envoyer à l'adversaire
                     reseau.envoyer('tirage' , ''.join(tirage))
-                else:
+                
+                else: # Réception
                     # Récupérer le tirage de l'adversaire
-                    param, tirage = reseau.recevoir(128)
+                    param, tirage = reseau.recevoir()
                     if param != 'tirage':
                         print("Reçu paramètre "+param+" au lieu de tirage")
                         quit()
                     self.affecter_tirage(i+1, tirage, False)
 
+            # Lancer l'écoute réseau asynchrone pour la suite
             reseau.demarrer_ecoute(self, plateau)
-        else: # Completer le chevalet de tous les joueurs
+        
+        else: # Tirer au sort les chevalets de tous les joueurs
             for i in range(len(self.joueurs)):
                 self.completer_chevalet(i+1, False)
 
@@ -429,7 +463,7 @@ class Jeu():
         joueur = self.joueurs[jnum-1]
 
         if src_zone==joueur.chevalet and dst_zone==self.grille: # Chevalet vers grille
-            if not(force) and self.joueur_local != self.joueur_actuel:
+            if not(force) and not(self.local_is_playing()):
                 return False
 
             if dst_busy: return False # destination occupée
@@ -441,7 +475,7 @@ class Jeu():
             self.grille[dst_idx[1]][dst_idx[0]] = piece.char
             joueur.provisoire.append(piece)
         elif src_zone==self.grille and dst_zone==joueur.chevalet: # Grille vers chevalet
-            if not(force) and self.joueur_local != self.joueur_actuel:
+            if not(force) and not(self.local_is_playing()):
                 return False
 
             if dst_busy: return False # destination occupée
@@ -463,7 +497,7 @@ class Jeu():
                 joueur.chevalet[src_idx[1]][src_idx[0]] = None
                 joueur.chevalet[dst_idx[1]][dst_idx[0]] = piece
         else: # Déplacement dans la grille
-            if not(force) and self.joueur_local != self.joueur_actuel:
+            if not(force) and not(self.local_is_playing()):
                 return False
 
             if dst_busy: return False # destination occupée
@@ -591,14 +625,13 @@ class Jeu():
 
         if len(self.joueurs[self.joueur_actuel-1].provisoire)==0:
             # Aucune lettre posée, le joueur veu passer son tour
-            if self.sound!=None: self.sound.play()
+            self.sound.play()
             return (True, 'je passe mon tour')
 
         score, mots, points = self.verifier_positionnement()
         if score==0: # Coup invalide
             return (False, mots[0]) 
         else: # OK
-            if self.sound!=None: self.sound.play()
             if ' ' in ''.join(mots):
                 return (False, 'Il faut attribuer une lettre au joker avec un clic droit sur la pièce')
 
@@ -610,6 +643,7 @@ class Jeu():
                     return (False, 'Mot ' + m + ' non valide.')
                 msg += m + '(' + str(points[i]) + ') '
             joueur.score += score
+            self.sound.play()
             return (True, msg)
 
     def identifier_mot(self, horizontal, xmin, xmax, ymin, ymax, joueur):
