@@ -32,6 +32,12 @@ class Personnage(pygame.sprite.Sprite):
         self.rect.top = 11.5*cell_sz
         
     def pledge(self):
+        """ 
+        Toujours longer un mur et tourner de préference à droite
+        quand on ne peut plus avancer.
+        """
+        
+        
         # Détection de murs
         mur = [0,0,0,0] # haut, droite, bas, gauche
 
@@ -40,7 +46,7 @@ class Personnage(pygame.sprite.Sprite):
         l1 = int(self.rect.top//self.cz)
         l2 = int((self.rect.bottom-1)//self.cz)
         if self.plateau[l1][c]==1 or  self.plateau[l2][c]==1:
-            self.rect.right = c*self.cz
+            self.rect.right = c*self.cz # Froler le mur
             mur[DROITE]=1
             
         # Mur à gauche ?
@@ -48,7 +54,7 @@ class Personnage(pygame.sprite.Sprite):
         l1 = int(self.rect.top//self.cz)
         l2 = int((self.rect.bottom-1)//self.cz)
         if self.plateau[l1][c]==1 or self.plateau[l2][c]==1:
-            self.rect.left = (c+1)*self.cz
+            self.rect.left = (c+1)*self.cz # Froler le mur
             mur[GAUCHE]=1
             
         # Détecter un mur en bas
@@ -56,7 +62,7 @@ class Personnage(pygame.sprite.Sprite):
         c2 = int((self.rect.right-1)//self.cz)
         l = int(self.rect.bottom//self.cz)
         if self.plateau[l][c1]==1 or self.plateau[l][c2]==1:
-            self.rect.bottom = l*self.cz
+            self.rect.bottom = l*self.cz # Froler le mur
             mur[BAS]=1
 
         # Détecter un mur en haut
@@ -64,10 +70,11 @@ class Personnage(pygame.sprite.Sprite):
         c2 = int((self.rect.right-1)//self.cz)
         l = int((self.rect.top-1)//self.cz)
         if self.plateau[l][c1]==1 or self.plateau[l][c2]==1:
-            self.rect.top = (l+1)*self.cz
+            self.rect.top = (l+1)*self.cz # Froler le mur
             mur[HAUT] = 1
         
-        if self.etat==0: # aller tout droit (jusqu'à trouver un mur)
+        if self.etat==0: 
+            # aller tout droit (jusqu'à trouver un mur) puis tourner à droite
             if self.direction==DROITE and mur[DROITE]==1:
                 self.direction=BAS
                 self.etat += 1

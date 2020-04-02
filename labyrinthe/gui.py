@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import pygame
 from page0 import Page0
 from page1 import Page1

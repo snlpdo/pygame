@@ -21,7 +21,7 @@ class Page0():
         self.menu = []
         self.menu_selected = []
         self.rect = []
-        liste = ["Jouer", "Configurer", "Quitter"]
+        liste = ["Labyrinthe", "Configurer", "Quitter"]
         nb_menu = len(liste)
         for i in range(nb_menu):
             rendu = police.render(liste[i], True, BLEU)
