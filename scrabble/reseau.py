@@ -4,8 +4,6 @@ import socket
 import struct
 import time
 
-from lettre import *
-
 class Reseau():
     def __init__(self, args):
         if args.serveur: # Mode serveur     

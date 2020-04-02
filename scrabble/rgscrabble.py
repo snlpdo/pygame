@@ -8,11 +8,9 @@
 import sys
 import pygame
 import argparse
-import sys
 
 from plateau import Plateau
-from lettre import * 
-from jeu import *
+from jeu import Jeu
 from reseau import Reseau
 
 # Dimension de la fenetre
