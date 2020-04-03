@@ -1,5 +1,5 @@
 import pygame
-from engine import *
+from engine import Jeu
 
 """
 Ce module ne s'occupe que de la partie graphique (dessiner le plateau, les pièce) 
@@ -14,6 +14,9 @@ NOIR = (0,0,0)
 
 # Démarrer la bibliothèque
 pygame.init()
+
+# Création du jeu
+jeu = Jeu()
 
 # Définir la taille de la fenêtre en pixels
 screen = pygame.display.set_mode((WIDTH,HEIGHT))
@@ -54,7 +57,7 @@ while continuer:
       position = e.pos
       colonne = int(position[0]//(WIDTH/3))
       ligne = int(position[1]//(HEIGHT/3))
-      maj(colonne, ligne)
+      jeu.maj(colonne, ligne)
 
   ##############################
   # Mises à jour des propriétés
@@ -64,11 +67,11 @@ while continuer:
   #########################
   # Dessin du contenu
   screen.blit(bg, (0,0))
-  for i in range(len(plateau)):
-    for j in range(len(plateau[i])):
-      if plateau[i][j]==1: # une croix
+  for i in range(len(jeu.plateau)):
+    for j in range(len(jeu.plateau[i])):
+      if jeu.plateau[i][j]==1: # une croix
         screen.blit(croix, (j*WIDTH/3+2, i*HEIGHT/3+2))
-      elif plateau[i][j]==2: # un cercle
+      elif jeu.plateau[i][j]==2: # un cercle
         screen.blit(cercle, (j*WIDTH/3+2, i*HEIGHT/3+2))
   
   #########################  

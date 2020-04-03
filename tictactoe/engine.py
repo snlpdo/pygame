@@ -4,36 +4,32 @@ Il ne doit surtout pas supposer qu'il existe une interface
 graphique.
 """
 
-# Contenu des cellules:
-# 0: case vide
-# 1: croix
-# 2: cercle
-plateau = [
-  [0,0,0],
-  [0,0,0],
-  [0,0,0],
-]
+class Jeu:
 
-# 2 joueurs 1 (croix) et 2 (cercle)
-joueur = 1
+	def __init__(self):
+		# Contenu des cellules:
+		# 0: case vide
+		# 1: croix
+		# 2: cercle
+		self.plateau = [
+		  [0,0,0],
+		  [0,0,0],
+		  [0,0,0],
+		]
 
-def maj(c, l):
-	"""
-	Prendre en compte un coup sur la cellule
-	de coordonnées c (colonne) et l (ligne)
-	"""
-	# Pour pouvoir modifier la variable joueur dans la fonction
-	global joueur
+		# 2 joueurs 1 (croix) et 2 (cercle)
+		self.joueur = 1
 
-	# Vérifier que la case est libre
-	if plateau[l][c]!=0:
-		return
-	else:
-		plateau[l][c]=joueur
+	def maj(self, c, l):
+		"""
+		Prendre en compte un coup sur la cellule
+		de coordonnées c (colonne) et l (ligne)
+		"""
+		# Vérifier que la case est libre
+		if self.plateau[l][c]!=0:
+			return
+		else:
+			self.plateau[l][c] = self.joueur
 
-	# Passer au joueur suivant
-	if joueur==1:
-		joueur=2
-	else:
-		joueur=1
-
+		# Passer au joueur suivant
+		self.joueur= 2 - (self.joueur-1)
