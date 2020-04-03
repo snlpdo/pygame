@@ -20,6 +20,7 @@ jeu = Jeu()
 
 # Définir la taille de la fenêtre en pixels
 screen = pygame.display.set_mode((WIDTH,HEIGHT))
+pygame.display.set_caption("Tic Tac Toe")
 
 ##################################################
 # Préparer les images d'arrière plan et les pièces
@@ -53,7 +54,7 @@ while continuer:
   for e in pygame.event.get():
     if e.type == pygame.QUIT:
       continuer = False
-    elif e.type == pygame.MOUSEBUTTONUP:
+    elif e.type == pygame.MOUSEBUTTONUP and not jeu.fin[0]:
       position = e.pos
       colonne = int(position[0]//(WIDTH/3))
       ligne = int(position[1]//(HEIGHT/3))
@@ -74,6 +75,10 @@ while continuer:
       elif jeu.plateau[i][j]==2: # un cercle
         screen.blit(cercle, (j*WIDTH/3+2, i*HEIGHT/3+2))
   
+  # En cas de victoire
+  if jeu.fin[0]:
+    pygame.display.set_caption("Victoire "+str(jeu.fin[1]))
+
   #########################  
   # raffraichir l'affichage
   pygame.display.flip()
